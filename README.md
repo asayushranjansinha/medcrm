@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MedCRM
 
-## Getting Started
+Medical territory management CRM for pharmaceutical teams — HCPs, products, visits, dispatches, dashboard KPIs, and Excel exports.
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Next.js 15 (App Router), TypeScript (strict)
+- PostgreSQL + Drizzle ORM
+- Auth.js (NextAuth v5) — credentials + JWT
+- Shadcn/UI + Tailwind CSS v4
+- TanStack Query + Table, Zustand, Zod, React Hook Form, ExcelJS, Recharts, Sonner
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Setup
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. **Install dependencies**
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+   ```bash
+   npm install
+   ```
 
-## Learn More
+2. **Environment**
 
-To learn more about Next.js, take a look at the following resources:
+   ```bash
+   cp .env.local.example .env.local
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+   Set a real `DATABASE_URL` (local Postgres or Neon) and generate `NEXTAUTH_SECRET` (e.g. `openssl rand -base64 32`).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+3. **Database**
 
-## Deploy on Vercel
+   ```bash
+   npx drizzle-kit generate
+   npx drizzle-kit migrate
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+4. **Seed**
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+   ```bash
+   npm run db:seed
+   ```
+
+   Default logins:
+
+   - `admin@medcrm.com` / `Admin@123`
+   - `manager@medcrm.com` / `Manager@123`
+   - `mr@medcrm.com` / `Mr@123`
+
+5. **Dev server**
+
+   ```bash
+   npm run dev
+   ```
+
+   Open [http://localhost:3000](http://localhost:3000) — you will be redirected to sign in or the dashboard.
+
+## Scripts
+
+| Script            | Description                |
+| ----------------- | -------------------------- |
+| `npm run dev`     | Next.js dev (Turbopack)    |
+| `npm run build`   | Production build           |
+| `npm run db:generate` | Drizzle SQL migrations |
+| `npm run db:migrate`  | Apply migrations       |
+| `npm run db:push`     | Push schema (dev only) |
+| `npm run db:seed`     | Seed sample data       |
+| `npm run db:studio`   | Drizzle Studio         |
+
+## Notes
+
+- `DATABASE_URL` must point to a live Postgres instance for runtime and seeds. A placeholder URL is only used so `next build` can compile without a DB.
+- All domain tables include nullable `organizationId` for future multi-tenancy.
+- RBAC: **ADMIN** sees all territories; **MANAGER** / **MR** are scoped by territory and assignment rules in `lib/rbac.ts` and services.
