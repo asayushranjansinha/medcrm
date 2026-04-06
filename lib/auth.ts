@@ -7,7 +7,7 @@ import { users } from '@/lib/db/schema';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
   session: { strategy: 'jwt', maxAge: 60 * 60 * 24 * 7 },
   pages: { signIn: '/login' },
   providers: [

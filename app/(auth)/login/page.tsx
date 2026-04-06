@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { signIn } from 'next-auth/react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from '@/components/ui/sonner';
@@ -13,14 +13,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 const LoginSchema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   password: z.string().min(1, 'Password required'),
 });
 
 type LoginValues = z.infer<typeof LoginSchema>;
 
 export default function LoginPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') ?? '/dashboard';
   const [loading, setLoading] = useState(false);
@@ -42,8 +41,13 @@ export default function LoginPage() {
         toast.error('Invalid email or password');
         return;
       }
-      router.push(callbackUrl);
-      router.refresh();
+      // Full navigation so the session cookie is visible to middleware on the next request
+      // (client router.push can race the Set-Cookie from credentials sign-in on Vercel).
+      const safeCallback =
+        callbackUrl.startsWith('/') && !callbackUrl.startsWith('//')
+          ? callbackUrl
+          : '/dashboard';
+      window.location.assign(safeCallback);
     } finally {
       setLoading(false);
     }

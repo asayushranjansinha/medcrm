@@ -1,14 +1,14 @@
-import { getToken } from 'next-auth/jwt';
+import { auth } from '@/lib/auth';
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
 
-export async function middleware(request: NextRequest) {
+/**
+ * Use Auth.js `auth()` middleware (not `getToken` from `next-auth/jwt`).
+ * v5 session cookies are read correctly here; `getToken` often returns null on Vercel
+ * while `/api/auth/session` still works — causing redirect loops after login.
+ */
+export default auth((request) => {
   const { pathname } = request.nextUrl;
-  const token = await getToken({
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
-  const isLoggedIn = !!token;
+  const isLoggedIn = !!request.auth?.user;
 
   if (pathname.startsWith('/api/auth')) {
     return NextResponse.next();
@@ -18,7 +18,7 @@ export async function middleware(request: NextRequest) {
     if (!isLoggedIn) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' } as const,
-        { status: 401 }
+        { status: 401 },
       );
     }
     return NextResponse.next();
@@ -42,7 +42,7 @@ export async function middleware(request: NextRequest) {
   }
 
   return NextResponse.next();
-}
+});
 
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
