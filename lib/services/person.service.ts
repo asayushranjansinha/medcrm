@@ -43,6 +43,7 @@ export type PersonListQuery = {
   category?: string;
   assignedToUserId?: string;
   isActive?: string;
+  entityType?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 };
@@ -76,6 +77,10 @@ export async function listPersons(session: SessionUser, q: PersonListQuery) {
   if (q.assignedToUserId) conditions.push(eq(persons.assignedToUserId, q.assignedToUserId));
   if (q.isActive === 'true') conditions.push(eq(persons.isActive, true));
   if (q.isActive === 'false') conditions.push(eq(persons.isActive, false));
+  if (q.entityType)
+    conditions.push(
+      eq(persons.entityType, q.entityType as (typeof persons.$inferSelect)['entityType'])
+    );
 
   const whereClause = and(...conditions.filter(Boolean));
 
@@ -147,6 +152,25 @@ export async function createPerson(session: SessionUser, input: CreatePersonInpu
   const [created] = await db
     .insert(persons)
     .values({
+      entityType: input.entityType ?? 'DOCTOR',
+      salesRole: input.salesRole ?? null,
+      reportingToId: input.reportingToId ?? null,
+      zone: input.zone || null,
+      region: input.region || null,
+      stockistCode: input.stockistCode || null,
+      gstin: input.gstin || null,
+      creditLimit:
+        input.creditLimit !== undefined && input.creditLimit !== null && input.creditLimit !== ''
+          ? String(input.creditLimit)
+          : null,
+      outstandingAmount:
+        input.outstandingAmount !== undefined &&
+        input.outstandingAmount !== null &&
+        input.outstandingAmount !== ''
+          ? String(input.outstandingAmount)
+          : null,
+      entityHospitalType: input.entityHospitalType ?? null,
+      bedCount: input.bedCount ?? null,
       name: input.name,
       designation: input.designation,
       specialty: input.specialty || null,
@@ -175,6 +199,25 @@ export async function updatePerson(session: SessionUser, id: string, input: Upda
   if (!canAccessPerson(session, existing.territory, existing.assignedToUserId)) return null;
 
   const patch: Record<string, unknown> = { updatedAt: new Date() };
+  if (input.entityType !== undefined) patch.entityType = input.entityType;
+  if (input.salesRole !== undefined) patch.salesRole = input.salesRole;
+  if (input.reportingToId !== undefined) patch.reportingToId = input.reportingToId ?? null;
+  if (input.zone !== undefined) patch.zone = input.zone || null;
+  if (input.region !== undefined) patch.region = input.region || null;
+  if (input.stockistCode !== undefined) patch.stockistCode = input.stockistCode || null;
+  if (input.gstin !== undefined) patch.gstin = input.gstin || null;
+  if (input.creditLimit !== undefined)
+    patch.creditLimit =
+      input.creditLimit !== null && input.creditLimit !== ''
+        ? String(input.creditLimit)
+        : null;
+  if (input.outstandingAmount !== undefined)
+    patch.outstandingAmount =
+      input.outstandingAmount !== null && input.outstandingAmount !== ''
+        ? String(input.outstandingAmount)
+        : null;
+  if (input.entityHospitalType !== undefined) patch.entityHospitalType = input.entityHospitalType;
+  if (input.bedCount !== undefined) patch.bedCount = input.bedCount;
   if (input.name !== undefined) patch.name = input.name;
   if (input.designation !== undefined) patch.designation = input.designation;
   if (input.specialty !== undefined) patch.specialty = input.specialty || null;

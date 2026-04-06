@@ -8,10 +8,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="min-w-0">
         <Topbar />
-        <div className="bg-background flex flex-1 flex-col overflow-auto p-4 md:p-6">
-          {children}
+        <div className="bg-background flex min-w-0 flex-1 flex-col overflow-auto p-4 md:p-6">
+          <div className="min-w-0 flex-1">{children}</div>
         </div>
       </SidebarInset>
     </SidebarProvider>

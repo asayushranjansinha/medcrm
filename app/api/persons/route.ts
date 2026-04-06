@@ -25,6 +25,7 @@ export async function GET(req: NextRequest) {
       category: sp.get('category') ?? undefined,
       assignedToUserId: sp.get('assignedToUserId') ?? undefined,
       isActive: sp.get('isActive') ?? undefined,
+      entityType: sp.get('entityType') ?? undefined,
       sortBy,
       sortOrder,
     });

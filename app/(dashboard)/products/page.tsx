@@ -7,6 +7,7 @@ import { DataTable } from '@/components/shared/data-table';
 import { PageHeader } from '@/components/shared/page-header';
 import { ExportButton } from '@/components/reports/export-button';
 import { buttonVariants } from '@/components/ui/button';
+import { EyeIcon } from '@/components/ui/eye';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useProducts } from '@/hooks/use-products';
@@ -16,6 +17,7 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectOptionItems,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -105,9 +107,11 @@ export default function ProductsPage() {
         cell: ({ row }) => (
           <Link
             href={`/products/${row.original.id}`}
-            className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }))}
+            className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }))}
+            aria-label={`View ${row.original.name}`}
+            title="View"
           >
-            View
+            <EyeIcon size={16} className="text-muted-foreground" />
           </Link>
         ),
       },
@@ -164,12 +168,10 @@ export default function ProductsPage() {
                     <SelectValue placeholder="Any" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__all__">Any</SelectItem>
-                    {PRODUCT_CATEGORIES.map((c) => (
-                      <SelectItem key={c.value} value={c.value}>
-                        {c.label}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="__all__" label="Any">
+                      Any
+                    </SelectItem>
+                    <SelectOptionItems options={PRODUCT_CATEGORIES} />
                   </SelectContent>
                 </Select>
               </div>
@@ -183,10 +185,18 @@ export default function ProductsPage() {
                     <SelectValue placeholder="Any" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__all__">Any</SelectItem>
-                    <SelectItem value="in">In stock (≥10)</SelectItem>
-                    <SelectItem value="low">Low (&lt;10)</SelectItem>
-                    <SelectItem value="out">Out (0)</SelectItem>
+                    <SelectItem value="__all__" label="Any">
+                      Any
+                    </SelectItem>
+                    <SelectItem value="in" label="In stock (≥10)">
+                      In stock (≥10)
+                    </SelectItem>
+                    <SelectItem value="low" label="Low (<10)">
+                      Low (&lt;10)
+                    </SelectItem>
+                    <SelectItem value="out" label="Out (0)">
+                      Out (0)
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -202,9 +212,15 @@ export default function ProductsPage() {
                     <SelectValue placeholder="Any" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__all__">Any</SelectItem>
-                    <SelectItem value="true">Active</SelectItem>
-                    <SelectItem value="false">Inactive</SelectItem>
+                    <SelectItem value="__all__" label="Any">
+                      Any
+                    </SelectItem>
+                    <SelectItem value="true" label="Active">
+                      Active
+                    </SelectItem>
+                    <SelectItem value="false" label="Inactive">
+                      Inactive
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>

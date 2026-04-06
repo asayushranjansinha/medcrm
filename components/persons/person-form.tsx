@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { toast } from '@/components/ui/sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectOptionItems,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -45,8 +46,19 @@ export function PersonForm({
   const { data: users } = useUsers();
   const isEdit = !!defaultValues?.id;
   const form = useForm<CreatePersonInput>({
-    resolver: zodResolver(isEdit ? UpdatePersonSchema : CreatePersonSchema),
+    resolver: zodResolver(isEdit ? UpdatePersonSchema : CreatePersonSchema) as Resolver<CreatePersonInput>,
     defaultValues: {
+      entityType: defaultValues?.entityType ?? 'DOCTOR',
+      salesRole: defaultValues?.salesRole ?? undefined,
+      reportingToId: defaultValues?.reportingToId ?? undefined,
+      zone: defaultValues?.zone ?? undefined,
+      region: defaultValues?.region ?? undefined,
+      stockistCode: defaultValues?.stockistCode ?? undefined,
+      gstin: defaultValues?.gstin ?? undefined,
+      creditLimit: defaultValues?.creditLimit ?? undefined,
+      outstandingAmount: defaultValues?.outstandingAmount ?? undefined,
+      entityHospitalType: defaultValues?.entityHospitalType ?? undefined,
+      bedCount: defaultValues?.bedCount ?? undefined,
       name: defaultValues?.name ?? '',
       designation: defaultValues?.designation ?? 'DOCTOR',
       specialty: defaultValues?.specialty ?? '',
@@ -101,11 +113,7 @@ export function PersonForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {DESIGNATIONS.map((d) => (
-                <SelectItem key={d.value} value={d.value}>
-                  {d.label}
-                </SelectItem>
-              ))}
+              <SelectOptionItems options={DESIGNATIONS} />
             </SelectContent>
           </Select>
         </div>
@@ -119,11 +127,7 @@ export function PersonForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {PERSON_CATEGORIES.map((d) => (
-                <SelectItem key={d.value} value={d.value}>
-                  {d.label}
-                </SelectItem>
-              ))}
+              <SelectOptionItems options={PERSON_CATEGORIES} />
             </SelectContent>
           </Select>
         </div>
@@ -149,11 +153,7 @@ export function PersonForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {HOSPITAL_TYPES.map((d) => (
-                <SelectItem key={d.value} value={d.value}>
-                  {d.label}
-                </SelectItem>
-              ))}
+              <SelectOptionItems options={HOSPITAL_TYPES} />
             </SelectContent>
           </Select>
         </div>
@@ -197,9 +197,11 @@ export function PersonForm({
               <SelectValue placeholder="Unassigned" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__none__">Unassigned</SelectItem>
+              <SelectItem value="__none__" label="Unassigned">
+                Unassigned
+              </SelectItem>
               {(users ?? []).map((u) => (
-                <SelectItem key={u.id} value={u.id}>
+                <SelectItem key={u.id} value={u.id} label={u.name}>
                   {u.name}
                 </SelectItem>
               ))}

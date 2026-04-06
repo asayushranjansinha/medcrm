@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { PageHeader } from '@/components/shared/page-header';
+import { PageLoader } from '@/components/shared/page-loader';
+import { TableBodySkeleton } from '@/components/shared/table-body-skeleton';
 import { ProductForm } from '@/components/products/product-form';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -25,7 +27,7 @@ import type { UpdateProductInput } from '@/lib/validations/product';
 
 const TerritoryChart = dynamic(
   () => import('@/components/products/territory-chart').then((m) => m.TerritoryChart),
-  { ssr: false, loading: () => <div className="bg-muted/40 h-[220px] animate-pulse rounded-lg" /> }
+  { ssr: false, loading: () => <PageLoader variant="inline" message="" /> }
 );
 
 export default function ProductDetailPage() {
@@ -34,7 +36,10 @@ export default function ProductDetailPage() {
   const [editing, setEditing] = useState(false);
   const { data: product, isLoading } = useProduct(id);
   const update = useUpdateProduct(id);
-  const { data: dispatchesData } = useDispatches({ productId: id, pageSize: '500' });
+  const { data: dispatchesData, isPending: dispatchesPending } = useDispatches({
+    productId: id,
+    pageSize: '500',
+  });
 
   const territoryData = useMemo(() => {
     const m = new Map<string, number>();
@@ -45,7 +50,8 @@ export default function ProductDetailPage() {
     return [...m.entries()].map(([name, totalQty]) => ({ name, totalQty })).slice(0, 12);
   }, [dispatchesData]);
 
-  if (isLoading || !product) return <p className="text-muted-foreground">Loading…</p>;
+  if (isLoading) return <PageLoader />;
+  if (!product) return <p className="text-muted-foreground">Product not found.</p>;
 
   const movementRows = [...(dispatchesData?.items ?? [])].sort(
     (a, b) => new Date(a.dispatchDate).getTime() - new Date(b.dispatchDate).getTime()
@@ -127,17 +133,29 @@ export default function ProductDetailPage() {
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
-                  {(dispatchesData?.items ?? []).map((d) => (
-                    <TableRow key={d.id}>
-                      <TableCell>{d.personName}</TableCell>
-                      <TableCell>{d.personCity}</TableCell>
-                      <TableCell>{d.quantity}</TableCell>
-                      <TableCell>{formatDate(d.dispatchDate)}</TableCell>
-                      <TableCell>{d.status}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
+                {dispatchesPending ? (
+                  <TableBodySkeleton columns={5} rows={6} />
+                ) : (
+                  <TableBody>
+                    {(dispatchesData?.items ?? []).length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-muted-foreground">
+                          No dispatches yet.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      (dispatchesData?.items ?? []).map((d) => (
+                        <TableRow key={d.id}>
+                          <TableCell>{d.personName}</TableCell>
+                          <TableCell>{d.personCity}</TableCell>
+                          <TableCell>{d.quantity}</TableCell>
+                          <TableCell>{formatDate(d.dispatchDate)}</TableCell>
+                          <TableCell>{d.status}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                )}
               </Table>
             </CardContent>
           </Card>
@@ -156,16 +174,28 @@ export default function ProductDetailPage() {
                     <TableHead>Recipient</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
-                  {movementRows.map((m) => (
-                    <TableRow key={m.id}>
-                      <TableCell>{formatDate(m.dispatchDate)}</TableCell>
-                      <TableCell>{m.dispatchType}</TableCell>
-                      <TableCell>{m.quantity}</TableCell>
-                      <TableCell>{m.personName}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
+                {dispatchesPending ? (
+                  <TableBodySkeleton columns={4} rows={6} />
+                ) : (
+                  <TableBody>
+                    {movementRows.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-muted-foreground">
+                          No movements yet.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      movementRows.map((m) => (
+                        <TableRow key={m.id}>
+                          <TableCell>{formatDate(m.dispatchDate)}</TableCell>
+                          <TableCell>{m.dispatchType}</TableCell>
+                          <TableCell>{m.quantity}</TableCell>
+                          <TableCell>{m.personName}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                )}
               </Table>
             </CardContent>
           </Card>

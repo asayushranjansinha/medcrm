@@ -1,8 +1,25 @@
 import { z } from 'zod';
 
+export const MovementTypeSchema = z.enum([
+  'COMPANY_TO_STOCKIST',
+  'STOCKIST_TO_HOSPITAL',
+  'STOCKIST_TO_RETAILER',
+  'COMPANY_TO_HOSPITAL',
+  'SAMPLE_TO_DOCTOR',
+  'RETURN_FROM_STOCKIST',
+  'RETURN_FROM_HOSPITAL',
+  'ADJUSTMENT',
+]);
+
 export const CreateDispatchSchema = z.object({
+  movementType: MovementTypeSchema,
+  fromEntityId: z.string().uuid().optional().nullable(),
+  toEntityId: z.string().uuid().optional().nullable(),
+  fromEntityType: z.string().max(80).optional().nullable(),
+  toEntityType: z.string().max(80).optional().nullable(),
+  toRetailerName: z.string().max(200).optional().nullable(),
   productId: z.string().uuid(),
-  personId: z.string().uuid(),
+  personId: z.string().uuid().optional(),
   userId: z.string().uuid().optional(),
   dispatchType: z.enum(['SAMPLE', 'SALE', 'PROMOTIONAL', 'RETURN']),
   quantity: z.coerce.number().int().positive(),

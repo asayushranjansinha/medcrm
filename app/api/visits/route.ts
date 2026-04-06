@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
       search: sp.get('search') ?? undefined,
       dateFrom: sp.get('dateFrom') ?? undefined,
       dateTo: sp.get('dateTo') ?? undefined,
+      personId: sp.get('personId') ?? undefined,
       userId: sp.get('userId') ?? undefined,
       purpose: sp.get('purpose') ?? undefined,
       status: sp.get('status') ?? undefined,

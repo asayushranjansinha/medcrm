@@ -9,6 +9,7 @@ import { StatsCard } from '@/components/dashboard/stats-card';
 import { TopProductsChart } from '@/components/dashboard/top-products-chart';
 import { VisitActivityChart } from '@/components/dashboard/visit-activity-chart';
 import { PageHeader } from '@/components/shared/page-header';
+import { PageLoader } from '@/components/shared/page-loader';
 import { buttonVariants } from '@/components/ui/button';
 import { cn, formatCurrency } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,6 +20,10 @@ export default function DashboardPage() {
 
   if (error) {
     return <p className="text-destructive">Failed to load dashboard.</p>;
+  }
+
+  if (isLoading) {
+    return <PageLoader />;
   }
 
   const s = data as
@@ -38,6 +43,8 @@ export default function DashboardPage() {
         visitStatusBreakdown: Record<string, number>;
         hcpCategoryDistribution: Record<string, number>;
         recentActivity: { at: string; label: string; detail: string; actor: string }[];
+        lowStockAlerts?: number;
+        targetAchievementPctAvg?: number;
       }
     | undefined;
 
@@ -71,25 +78,38 @@ export default function DashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatsCard
           title="Total HCPs"
-          value={isLoading ? '—' : (s?.totalPersons ?? 0)}
+          value={s?.totalPersons ?? 0}
           trendPct={s?.trends.totalPersonsPct}
         />
         <StatsCard
           title="Visits this month"
-          value={isLoading ? '—' : (s?.visitsThisMonth ?? 0)}
+          value={s?.visitsThisMonth ?? 0}
           trendPct={s?.trends.visitsPct}
         />
         <StatsCard
           title="Products dispatched"
-          value={isLoading ? '—' : (s?.dispatchesThisMonth ?? 0)}
+          value={s?.dispatchesThisMonth ?? 0}
           trendPct={s?.trends.dispatchesPct}
           subtitle="Units (all types)"
         />
         <StatsCard
           title="Revenue this month"
-          value={isLoading ? '—' : formatCurrency(s?.revenueThisMonth ?? 0)}
+          value={formatCurrency(s?.revenueThisMonth ?? 0)}
           trendPct={s?.trends.revenuePct}
           subtitle="From completed orders"
+        />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <StatsCard
+          title="Low stock alerts"
+          value={s?.lowStockAlerts ?? 0}
+          subtitle="Stockist lines under 10 units"
+        />
+        <StatsCard
+          title="Target achievement"
+          value={`${s?.targetAchievementPctAvg ?? 0}%`}
+          subtitle="Avg for MRs, current month"
         />
       </div>
 

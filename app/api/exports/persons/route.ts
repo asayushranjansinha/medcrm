@@ -28,6 +28,7 @@ export async function GET(req: NextRequest) {
     category: sp.get('category') ?? undefined,
     assignedToUserId: sp.get('assignedToUserId') ?? undefined,
     isActive: sp.get('isActive') ?? undefined,
+    entityType: sp.get('entityType') ?? undefined,
     sortBy,
     sortOrder,
   });
@@ -35,6 +36,8 @@ export async function GET(req: NextRequest) {
   const columns = [
     { key: 'sno', header: 'S.No', width: 6 },
     { key: 'name', header: 'Full Name', width: 24 },
+    { key: 'entityType', header: 'Entity type', width: 12 },
+    { key: 'salesRole', header: 'Sales role', width: 12 },
     { key: 'designation', header: 'Designation', width: 14 },
     { key: 'specialty', header: 'Specialty', width: 16 },
     { key: 'qualification', header: 'Qualification', width: 14 },
@@ -58,6 +61,8 @@ export async function GET(req: NextRequest) {
   const rows = items.map((p, i) => ({
     sno: i + 1,
     name: p.name,
+    entityType: p.entityType,
+    salesRole: (p as { salesRole?: string | null }).salesRole ?? '',
     designation: p.designation,
     specialty: p.specialty ?? '',
     qualification: p.qualification ?? '',

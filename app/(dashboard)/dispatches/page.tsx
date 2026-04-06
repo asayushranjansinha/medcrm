@@ -24,10 +24,11 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectOptionItems,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { DISPATCH_TYPES, DISPATCH_STATUSES } from '@/lib/constants';
+import { DISPATCH_TYPES, DISPATCH_STATUSES, MOVEMENT_TYPES } from '@/lib/constants';
 import { useUsers } from '@/hooks/use-users';
 import { useProducts } from '@/hooks/use-products';
 import { usePersons } from '@/hooks/use-persons';
@@ -42,6 +43,7 @@ export default function DispatchesPage() {
     productId: '',
     personId: '',
     dispatchType: '',
+    movementType: '',
     status: '',
     userId: '',
   });
@@ -58,6 +60,7 @@ export default function DispatchesPage() {
     productId: filters.productId || undefined,
     personId: filters.personId || undefined,
     dispatchType: filters.dispatchType || undefined,
+    movementType: filters.movementType || undefined,
     status: filters.status || undefined,
     userId: filters.userId || undefined,
     sortBy: 'dispatchDate',
@@ -69,7 +72,8 @@ export default function DispatchesPage() {
       { accessorKey: 'productName', header: 'Product' },
       { accessorKey: 'personName', header: 'Recipient' },
       { accessorKey: 'dispatchedByName', header: 'By' },
-      { accessorKey: 'dispatchType', header: 'Type' },
+      { accessorKey: 'movementType', header: 'Movement' },
+      { accessorKey: 'dispatchType', header: 'Category' },
       { accessorKey: 'quantity', header: 'Qty' },
       {
         accessorKey: 'dispatchDate',
@@ -100,7 +104,7 @@ export default function DispatchesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Dispatches" description="Samples, sales, and transfers">
+      <PageHeader title="Stock movements" description="Inventory transfers and dispatches">
         <ExportButton
           path="/api/exports/dispatches"
           filenamePrefix="dispatches"
@@ -111,6 +115,7 @@ export default function DispatchesPage() {
             productId: filters.productId || undefined,
             personId: filters.personId || undefined,
             dispatchType: filters.dispatchType || undefined,
+            movementType: filters.movementType || undefined,
             status: filters.status || undefined,
             userId: filters.userId || undefined,
             sortBy: 'dispatchDate',
@@ -163,9 +168,11 @@ export default function DispatchesPage() {
                   <SelectValue placeholder="Any" />
                 </SelectTrigger>
                 <SelectContent className="max-h-64">
-                  <SelectItem value="__all__">Any</SelectItem>
+                  <SelectItem value="__all__" label="Any">
+                    Any
+                  </SelectItem>
                   {(products?.items ?? []).map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
+                    <SelectItem key={p.id} value={p.id} label={p.name}>
                       {p.name}
                     </SelectItem>
                   ))}
@@ -182,9 +189,11 @@ export default function DispatchesPage() {
                   <SelectValue placeholder="Any" />
                 </SelectTrigger>
                 <SelectContent className="max-h-64">
-                  <SelectItem value="__all__">Any</SelectItem>
+                  <SelectItem value="__all__" label="Any">
+                    Any
+                  </SelectItem>
                   {(persons?.items ?? []).map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
+                    <SelectItem key={p.id} value={p.id} label={p.name}>
                       {p.name}
                     </SelectItem>
                   ))}
@@ -192,7 +201,26 @@ export default function DispatchesPage() {
               </Select>
             </div>
             <div>
-              <Label>Type</Label>
+              <Label>Movement</Label>
+              <Select
+                value={filters.movementType || '__all__'}
+                onValueChange={(v) =>
+                  setFilters((f) => ({ ...f, movementType: v === '__all__' ? '' : v }))
+                }
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Any" />
+                </SelectTrigger>
+                <SelectContent className="max-h-64">
+                  <SelectItem value="__all__" label="Any">
+                    Any
+                  </SelectItem>
+                  <SelectOptionItems options={MOVEMENT_TYPES} />
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Category</Label>
               <Select
                 value={filters.dispatchType || '__all__'}
                 onValueChange={(v) =>
@@ -203,12 +231,10 @@ export default function DispatchesPage() {
                   <SelectValue placeholder="Any" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all__">Any</SelectItem>
-                  {DISPATCH_TYPES.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="__all__" label="Any">
+                    Any
+                  </SelectItem>
+                  <SelectOptionItems options={DISPATCH_TYPES} />
                 </SelectContent>
               </Select>
             </div>
@@ -222,12 +248,10 @@ export default function DispatchesPage() {
                   <SelectValue placeholder="Any" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all__">Any</SelectItem>
-                  {DISPATCH_STATUSES.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>
-                      {s.label}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="__all__" label="Any">
+                    Any
+                  </SelectItem>
+                  <SelectOptionItems options={DISPATCH_STATUSES} />
                 </SelectContent>
               </Select>
             </div>
@@ -241,9 +265,11 @@ export default function DispatchesPage() {
                   <SelectValue placeholder="Any" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all__">Any</SelectItem>
+                  <SelectItem value="__all__" label="Any">
+                    Any
+                  </SelectItem>
                   {(users ?? []).map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
+                    <SelectItem key={u.id} value={u.id} label={u.name}>
                       {u.name}
                     </SelectItem>
                   ))}

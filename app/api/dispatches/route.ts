@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
       productId: sp.get('productId') ?? undefined,
       personId: sp.get('personId') ?? undefined,
       dispatchType: sp.get('dispatchType') ?? undefined,
+      movementType: sp.get('movementType') ?? undefined,
       status: sp.get('status') ?? undefined,
       userId: sp.get('userId') ?? undefined,
       sortBy,

@@ -30,7 +30,7 @@ function MedcrmBrand() {
           size="lg"
           render={<Link href="/dashboard" onClick={closeMobile} />}
         >
-          <div className="bg-sidebar-primary text-sidebar-primary-foreground flex size-8 items-center justify-center rounded-lg text-sm font-bold">
+          <div className="bg-sidebar-primary text-sidebar-primary-foreground flex size-8 items-center justify-center rounded-lg text-sm font-bold shrink-0">
             M
           </div>
           <div className="grid flex-1 text-left text-sm leading-tight">
@@ -51,7 +51,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <MedcrmBrand />
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="gap-2">
         <NavMedCrm />
       </SidebarContent>
       <SidebarFooter>

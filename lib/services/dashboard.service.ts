@@ -1,6 +1,14 @@
 import { and, count, desc, eq, gte, lt, lte } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { dispatches, persons, products, users, visits } from '@/lib/db/schema';
+import {
+  dispatches,
+  monthlyTargets,
+  persons,
+  products,
+  stockistInventory,
+  users,
+  visits,
+} from '@/lib/db/schema';
 import {
   canAccessPerson,
   dispatchAccessible,
@@ -258,6 +266,55 @@ export async function getDashboardStats(session: SessionUser) {
 
   const recentActivity = await buildRecentActivity(session);
 
+  const lowInvRows = await db
+    .select({
+      territory: persons.territory,
+      assignedTo: persons.assignedToUserId,
+    })
+    .from(stockistInventory)
+    .innerJoin(persons, eq(stockistInventory.personId, persons.id))
+    .where(
+      and(lt(stockistInventory.currentQty, 10), eq(persons.entityType, 'STOCKIST'))
+    );
+  const lowStockAlerts = lowInvRows.filter((r) =>
+    canAccessPerson(session, r.territory, r.assignedTo)
+  ).length;
+
+  const nowMonth = now.getMonth() + 1;
+  const nowYear = now.getFullYear();
+  const targetRowsMr = await db
+    .select({
+      target: monthlyTargets.targetValue,
+      achieved: monthlyTargets.achievedValue,
+      territory: persons.territory,
+      assignedTo: persons.assignedToUserId,
+    })
+    .from(monthlyTargets)
+    .innerJoin(persons, eq(monthlyTargets.employeeId, persons.id))
+    .where(
+      and(
+        eq(monthlyTargets.month, nowMonth),
+        eq(monthlyTargets.year, nowYear),
+        eq(persons.entityType, 'EMPLOYEE'),
+        eq(persons.salesRole, 'MR'),
+        eq(persons.isActive, true)
+      )
+    );
+  const targetFiltered = targetRowsMr.filter((r) =>
+    canAccessPerson(session, r.territory, r.assignedTo)
+  );
+  const targetPcts = targetFiltered
+    .map((r) => {
+      const t = Number.parseFloat(String(r.target));
+      const a = Number.parseFloat(String(r.achieved));
+      return t > 0 ? (a / t) * 100 : null;
+    })
+    .filter((x): x is number => x != null);
+  const targetAchievementPctAvg =
+    targetPcts.length > 0
+      ? Math.round((targetPcts.reduce((s, x) => s + x, 0) / targetPcts.length) * 10) / 10
+      : 0;
+
   return {
     totalPersons,
     visitsThisMonth,
@@ -274,6 +331,8 @@ export async function getDashboardStats(session: SessionUser) {
     visitStatusBreakdown,
     hcpCategoryDistribution: catDist,
     recentActivity,
+    lowStockAlerts,
+    targetAchievementPctAvg,
   };
 }
 

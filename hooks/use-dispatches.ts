@@ -48,6 +48,8 @@ export function useCreateDispatch() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['dispatches'] });
       qc.invalidateQueries({ queryKey: ['products'] });
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      qc.invalidateQueries({ queryKey: ['person-extensions'] });
     },
   });
 }

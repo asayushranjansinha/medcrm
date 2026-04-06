@@ -2,6 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
+import { useMemo } from 'react';
 import { useFieldArray, useForm, type Resolver } from 'react-hook-form';
 import { toast } from '@/components/ui/sonner';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectOptionItems,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -25,6 +27,34 @@ export function VisitForm() {
   const router = useRouter();
   const { data: personsData } = usePersons({ page: '1', pageSize: '200', sortBy: 'name', sortOrder: 'asc' });
   const { data: productsData } = useProducts({ page: '1', pageSize: '200', sortBy: 'name', sortOrder: 'asc' });
+
+  const hcpSelectItems = useMemo(
+    () =>
+      (personsData?.items ?? []).map((p) => ({
+        value: p.id,
+        label: `${p.name} — ${p.city}`,
+      })),
+    [personsData?.items]
+  );
+
+  const productSelectItems = useMemo(
+    () =>
+      (productsData?.items ?? []).map((p) => ({
+        value: p.id,
+        label: p.name,
+      })),
+    [productsData?.items]
+  );
+
+  const visitPurposeItems = useMemo(
+    () => VISIT_PURPOSES.map((p) => ({ value: p.value, label: p.label })),
+    []
+  );
+
+  const visitStatusItems = useMemo(
+    () => VISIT_STATUSES.map((s) => ({ value: s.value, label: s.label })),
+    []
+  );
 
   const form = useForm<CreateVisitInput>({
     resolver: zodResolver(CreateVisitSchema) as Resolver<CreateVisitInput>,
@@ -83,15 +113,16 @@ export function VisitForm() {
         <div className="space-y-2 lg:col-span-2">
           <Label>HCP *</Label>
           <Select
-            value={form.watch('personId')}
+            value={form.watch('personId') || null}
             onValueChange={(v) => form.setValue('personId', v ?? '')}
+            items={hcpSelectItems}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select HCP" />
             </SelectTrigger>
             <SelectContent className="max-h-72">
               {(personsData?.items ?? []).map((p) => (
-                <SelectItem key={p.id} value={p.id}>
+                <SelectItem key={p.id} value={p.id} label={`${p.name} — ${p.city}`}>
                   {p.name} — {p.city}
                 </SelectItem>
               ))}
@@ -114,16 +145,13 @@ export function VisitForm() {
             onValueChange={(v) => {
               if (v != null) form.setValue('purpose', v as CreateVisitInput['purpose']);
             }}
+            items={visitPurposeItems}
           >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {VISIT_PURPOSES.map((p) => (
-                <SelectItem key={p.value} value={p.value}>
-                  {p.label}
-                </SelectItem>
-              ))}
+              <SelectOptionItems options={VISIT_PURPOSES} />
             </SelectContent>
           </Select>
         </div>
@@ -152,17 +180,18 @@ export function VisitForm() {
               <div key={f.id} className="flex flex-wrap items-end gap-2">
                 <div className="min-w-[200px] flex-1">
                   <Select
-                    value={form.watch(`samplesGiven.${i}.productId`)}
+                    value={form.watch(`samplesGiven.${i}.productId`) || null}
                     onValueChange={(v) =>
                       form.setValue(`samplesGiven.${i}.productId`, v ?? '')
                     }
+                    items={productSelectItems}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Product" />
                     </SelectTrigger>
                     <SelectContent className="max-h-64">
                       {(productsData?.items ?? []).map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
+                        <SelectItem key={p.id} value={p.id} label={p.name}>
                           {p.name}
                         </SelectItem>
                       ))}
@@ -218,16 +247,13 @@ export function VisitForm() {
             onValueChange={(v) => {
               if (v != null) form.setValue('status', v as CreateVisitInput['status']);
             }}
+            items={visitStatusItems}
           >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {VISIT_STATUSES.map((s) => (
-                <SelectItem key={s.value} value={s.value}>
-                  {s.label}
-                </SelectItem>
-              ))}
+              <SelectOptionItems options={VISIT_STATUSES} />
             </SelectContent>
           </Select>
         </div>

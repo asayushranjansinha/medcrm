@@ -16,6 +16,7 @@ export type VisitListQuery = {
   search?: string;
   dateFrom?: string;
   dateTo?: string;
+  personId?: string;
   userId?: string;
   purpose?: string;
   status?: string;
@@ -29,6 +30,7 @@ export async function listVisits(session: SessionUser, q: VisitListQuery) {
 
   if (q.dateFrom) conditions.push(gte(visits.visitDate, new Date(q.dateFrom)));
   if (q.dateTo) conditions.push(lte(visits.visitDate, new Date(q.dateTo)));
+  if (q.personId) conditions.push(eq(visits.personId, q.personId));
   if (q.userId) conditions.push(eq(visits.userId, q.userId));
   if (q.purpose)
     conditions.push(eq(visits.purpose, q.purpose as (typeof visits.$inferSelect)['purpose']));

@@ -14,7 +14,6 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -24,6 +23,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { EmptyState } from '@/components/shared/empty-state';
+import { OrbitalLoader } from '@/components/ui/orbital-loader';
 import { Inbox } from 'lucide-react';
 
 type DataTableProps<T> = {
@@ -126,7 +126,7 @@ export function DataTable<T>({
   const pages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       {onSearchChange ? (
         <Input
           placeholder={searchPlaceholder}
@@ -135,7 +135,7 @@ export function DataTable<T>({
           className="max-w-sm"
         />
       ) : null}
-      <div className="overflow-x-auto rounded-lg border">
+      <div className="min-w-0 overflow-x-auto rounded-lg border">
         <Table>
           <TableHeader className="bg-muted/50 sticky top-0 z-10">
             {table.getHeaderGroups().map((hg) => (
@@ -151,19 +151,18 @@ export function DataTable<T>({
             ))}
           </TableHeader>
           <TableBody>
-            {isLoading
-              ? Array.from({ length: 10 }).map((_, i) => (
-                  <TableRow key={i}>
-                    {Array.from({ length: columns.length + (enableRowSelection ? 1 : 0) }).map(
-                      (_, j) => (
-                        <TableCell key={j}>
-                          <Skeleton className="h-8 w-full" />
-                        </TableCell>
-                      )
-                    )}
-                  </TableRow>
-                ))
-              : null}
+            {isLoading ? (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length + (enableRowSelection ? 1 : 0)}
+                  className="h-64 align-middle"
+                >
+                  <div className="flex justify-center py-8">
+                    <OrbitalLoader message="Loading…" />
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : null}
             {!isLoading && data.length === 0 ? (
               <TableRow>
                 <TableCell
@@ -188,26 +187,38 @@ export function DataTable<T>({
         </Table>
       </div>
       <div className="flex items-center justify-between gap-4">
-        <p className="text-muted-foreground text-sm">
-          {total === 0 ? '0' : `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, total)}`} of{' '}
-          {total}
-        </p>
+        <div className="text-muted-foreground text-sm">
+          {isLoading ? (
+            <span>Loading…</span>
+          ) : (
+            <>
+              {total === 0 ? '0' : `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, total)}`} of{' '}
+              {total}
+            </>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
-            disabled={page <= 1}
+            disabled={isLoading || page <= 1}
             onClick={() => onPageChange(page - 1)}
           >
             <ChevronLeft className="size-4" />
           </Button>
-          <span className="text-sm">
-            Page {page} / {pages}
-          </span>
+          <div className="flex min-h-[1.25rem] items-center text-sm">
+            {isLoading ? (
+              <span className="text-muted-foreground">…</span>
+            ) : (
+              <>
+                Page {page} / {pages}
+              </>
+            )}
+          </div>
           <Button
             variant="outline"
             size="sm"
-            disabled={page >= pages}
+            disabled={isLoading || page >= pages}
             onClick={() => onPageChange(page + 1)}
           >
             <ChevronRight className="size-4" />

@@ -6,7 +6,7 @@ import { DispatchForm } from '@/components/dispatches/dispatch-form';
 export default function NewDispatchPage() {
   return (
     <div className="space-y-6">
-      <PageHeader title="New dispatch" description="Record outbound inventory to an HCP" />
+      <PageHeader title="New stock movement" description="Record transfers and dispatches" />
       <DispatchForm />
     </div>
   );

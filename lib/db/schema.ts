@@ -1,6 +1,8 @@
 import { relations } from 'drizzle-orm';
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import {
   boolean,
+  date,
   decimal,
   index,
   integer,
@@ -9,6 +11,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
@@ -22,6 +25,37 @@ export const personDesignationEnum = pgEnum('person_designation', [
   'OTHER',
 ]);
 export const hospitalTypeEnum = pgEnum('hospital_type', ['GOVT', 'PRIVATE', 'CLINIC']);
+export const personEntityTypeEnum = pgEnum('person_entity_type', [
+  'EMPLOYEE',
+  'STOCKIST',
+  'HOSPITAL',
+  'DOCTOR',
+]);
+export const personSalesRoleEnum = pgEnum('person_sales_role', [
+  'NSM',
+  'ZSM',
+  'RSM',
+  'ASM',
+  'MR',
+  'ADMIN',
+]);
+export const entityHospitalTypeEnum = pgEnum('entity_hospital_type', [
+  'GOVT_HOSPITAL',
+  'PRIVATE_HOSPITAL',
+  'NURSING_HOME',
+  'CLINIC',
+  'PHARMACY',
+]);
+export const dispatchMovementTypeEnum = pgEnum('dispatch_movement_type', [
+  'COMPANY_TO_STOCKIST',
+  'STOCKIST_TO_HOSPITAL',
+  'STOCKIST_TO_RETAILER',
+  'COMPANY_TO_HOSPITAL',
+  'SAMPLE_TO_DOCTOR',
+  'RETURN_FROM_STOCKIST',
+  'RETURN_FROM_HOSPITAL',
+  'ADJUSTMENT',
+]);
 export const personCategoryEnum = pgEnum('person_category', ['A', 'B', 'C']);
 export const productCategoryEnum = pgEnum('product_category', [
   'TABLET',
@@ -76,6 +110,19 @@ export const persons = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     organizationId: uuid('organization_id'),
+    entityType: personEntityTypeEnum('entity_type').notNull().default('DOCTOR'),
+    salesRole: personSalesRoleEnum('role'),
+    reportingToId: uuid('reporting_to_id').references((): AnyPgColumn => persons.id, {
+      onDelete: 'set null',
+    }),
+    zone: varchar('zone', { length: 120 }),
+    region: varchar('region', { length: 120 }),
+    stockistCode: varchar('stockist_code', { length: 80 }),
+    gstin: varchar('gstin', { length: 20 }),
+    creditLimit: decimal('credit_limit', { precision: 14, scale: 2 }),
+    outstandingAmount: decimal('outstanding_amount', { precision: 14, scale: 2 }),
+    entityHospitalType: entityHospitalTypeEnum('entity_hospital_type'),
+    bedCount: integer('bed_count'),
     name: varchar('name', { length: 200 }).notNull(),
     designation: personDesignationEnum('designation').notNull(),
     specialty: varchar('specialty', { length: 120 }),
@@ -111,6 +158,8 @@ export const persons = pgTable(
     index('persons_category_idx').on(t.category),
     index('persons_assigned_to_user_id_idx').on(t.assignedToUserId),
     index('persons_designation_idx').on(t.designation),
+    index('persons_entity_type_idx').on(t.entityType),
+    index('persons_reporting_to_id_idx').on(t.reportingToId),
   ]
 );
 
@@ -177,6 +226,17 @@ export const dispatches = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     organizationId: uuid('organization_id'),
+    movementType: dispatchMovementTypeEnum('movement_type')
+      .notNull()
+      .default('COMPANY_TO_STOCKIST'),
+    fromEntityId: uuid('from_entity_id').references(() => persons.id, {
+      onDelete: 'set null',
+    }),
+    fromEntityType: varchar('from_entity_type', { length: 80 }),
+    toEntityId: uuid('to_entity_id').references(() => persons.id, {
+      onDelete: 'set null',
+    }),
+    toEntityType: varchar('to_entity_type', { length: 80 }),
     productId: uuid('product_id')
       .notNull()
       .references(() => products.id, { onDelete: 'cascade' }),
@@ -216,6 +276,92 @@ export const dispatches = pgTable(
     index('dispatches_user_id_idx').on(t.userId),
     index('dispatches_dispatch_date_idx').on(t.dispatchDate),
     index('dispatches_status_idx').on(t.status),
+    index('dispatches_movement_type_idx').on(t.movementType),
+    index('dispatches_from_entity_id_idx').on(t.fromEntityId),
+    index('dispatches_to_entity_id_idx').on(t.toEntityId),
+  ]
+);
+
+export const stockistInventory = pgTable(
+  'stockist_inventory',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    personId: uuid('person_id')
+      .notNull()
+      .references(() => persons.id, { onDelete: 'cascade' }),
+    productId: uuid('product_id')
+      .notNull()
+      .references(() => products.id, { onDelete: 'cascade' }),
+    currentQty: integer('current_qty').notNull().default(0),
+    lastMovementDate: date('last_movement_date', { mode: 'date' }),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    unique('stockist_inventory_person_product_unique').on(t.personId, t.productId),
+    index('stockist_inventory_person_id_idx').on(t.personId),
+    index('stockist_inventory_product_id_idx').on(t.productId),
+  ]
+);
+
+export const hospitalInventory = pgTable(
+  'hospital_inventory',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    personId: uuid('person_id')
+      .notNull()
+      .references(() => persons.id, { onDelete: 'cascade' }),
+    productId: uuid('product_id')
+      .notNull()
+      .references(() => products.id, { onDelete: 'cascade' }),
+    currentQty: integer('current_qty').notNull().default(0),
+    lastMovementDate: date('last_movement_date', { mode: 'date' }),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    unique('hospital_inventory_person_product_unique').on(t.personId, t.productId),
+    index('hospital_inventory_person_id_idx').on(t.personId),
+    index('hospital_inventory_product_id_idx').on(t.productId),
+  ]
+);
+
+export const monthlyTargets = pgTable(
+  'monthly_targets',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    employeeId: uuid('employee_id')
+      .notNull()
+      .references(() => persons.id, { onDelete: 'cascade' }),
+    productId: uuid('product_id').references(() => products.id, { onDelete: 'set null' }),
+    month: integer('month').notNull(),
+    year: integer('year').notNull(),
+    targetValue: decimal('target_value', { precision: 14, scale: 2 }).notNull().default('0'),
+    achievedValue: decimal('achieved_value', { precision: 14, scale: 2 }).notNull().default('0'),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    unique('monthly_targets_employee_product_month_year_unique').on(
+      t.employeeId,
+      t.productId,
+      t.month,
+      t.year
+    ),
+    index('monthly_targets_employee_id_idx').on(t.employeeId),
+    index('monthly_targets_month_year_idx').on(t.month, t.year),
   ]
 );
 
@@ -230,12 +376,28 @@ export const personsRelations = relations(persons, ({ one, many }) => ({
     fields: [persons.assignedToUserId],
     references: [users.id],
   }),
+  reportingTo: one(persons, {
+    fields: [persons.reportingToId],
+    references: [persons.id],
+    relationName: 'person_reporting_chain',
+  }),
+  directReports: many(persons, {
+    relationName: 'person_reporting_chain',
+  }),
   visits: many(visits),
-  dispatches: many(dispatches),
+  dispatchesAsRecipient: many(dispatches, { relationName: 'dispatch_recipient_person' }),
+  dispatchesFromAsParty: many(dispatches, { relationName: 'dispatch_from_entity_person' }),
+  dispatchesToAsParty: many(dispatches, { relationName: 'dispatch_to_entity_person' }),
+  stockistInventoryRows: many(stockistInventory),
+  hospitalInventoryRows: many(hospitalInventory),
+  monthlyTargets: many(monthlyTargets),
 }));
 
 export const productsRelations = relations(products, ({ many }) => ({
   dispatches: many(dispatches),
+  stockistInventoryRows: many(stockistInventory),
+  hospitalInventoryRows: many(hospitalInventory),
+  monthlyTargets: many(monthlyTargets),
 }));
 
 export const visitsRelations = relations(visits, ({ one }) => ({
@@ -257,10 +419,54 @@ export const dispatchesRelations = relations(dispatches, ({ one }) => ({
   person: one(persons, {
     fields: [dispatches.personId],
     references: [persons.id],
+    relationName: 'dispatch_recipient_person',
   }),
   user: one(users, {
     fields: [dispatches.userId],
     references: [users.id],
+  }),
+  fromEntityPerson: one(persons, {
+    fields: [dispatches.fromEntityId],
+    references: [persons.id],
+    relationName: 'dispatch_from_entity_person',
+  }),
+  toEntityPerson: one(persons, {
+    fields: [dispatches.toEntityId],
+    references: [persons.id],
+    relationName: 'dispatch_to_entity_person',
+  }),
+}));
+
+export const stockistInventoryRelations = relations(stockistInventory, ({ one }) => ({
+  person: one(persons, {
+    fields: [stockistInventory.personId],
+    references: [persons.id],
+  }),
+  product: one(products, {
+    fields: [stockistInventory.productId],
+    references: [products.id],
+  }),
+}));
+
+export const hospitalInventoryRelations = relations(hospitalInventory, ({ one }) => ({
+  person: one(persons, {
+    fields: [hospitalInventory.personId],
+    references: [persons.id],
+  }),
+  product: one(products, {
+    fields: [hospitalInventory.productId],
+    references: [products.id],
+  }),
+}));
+
+export const monthlyTargetsRelations = relations(monthlyTargets, ({ one }) => ({
+  employee: one(persons, {
+    fields: [monthlyTargets.employeeId],
+    references: [persons.id],
+  }),
+  product: one(products, {
+    fields: [monthlyTargets.productId],
+    references: [products.id],
   }),
 }));
 
@@ -269,3 +475,6 @@ export type Person = typeof persons.$inferSelect;
 export type Product = typeof products.$inferSelect;
 export type Visit = typeof visits.$inferSelect;
 export type Dispatch = typeof dispatches.$inferSelect;
+export type StockistInventoryRow = typeof stockistInventory.$inferSelect;
+export type HospitalInventoryRow = typeof hospitalInventory.$inferSelect;
+export type MonthlyTargetRow = typeof monthlyTargets.$inferSelect;

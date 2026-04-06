@@ -56,6 +56,24 @@ export const DISPATCH_STATUSES = [
   { value: 'CANCELLED', label: 'Cancelled' },
 ] as const;
 
+export const MOVEMENT_TYPES = [
+  { value: 'COMPANY_TO_STOCKIST', label: 'Company → Stockist' },
+  { value: 'STOCKIST_TO_HOSPITAL', label: 'Stockist → Hospital' },
+  { value: 'STOCKIST_TO_RETAILER', label: 'Stockist → Retailer' },
+  { value: 'COMPANY_TO_HOSPITAL', label: 'Company → Hospital' },
+  { value: 'SAMPLE_TO_DOCTOR', label: 'Sample → Doctor' },
+  { value: 'RETURN_FROM_STOCKIST', label: 'Return from stockist' },
+  { value: 'RETURN_FROM_HOSPITAL', label: 'Return from hospital' },
+  { value: 'ADJUSTMENT', label: 'Adjustment' },
+] as const;
+
+export const ENTITY_TYPES = [
+  { value: 'EMPLOYEE', label: 'Employee' },
+  { value: 'STOCKIST', label: 'Stockist' },
+  { value: 'HOSPITAL', label: 'Hospital' },
+  { value: 'DOCTOR', label: 'Doctor' },
+] as const;
+
 export const USER_ROLES = [
   { value: 'ADMIN', label: 'Admin' },
   { value: 'MANAGER', label: 'Manager' },

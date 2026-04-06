@@ -1,6 +1,27 @@
 import { z } from 'zod';
 
+export const EntityTypeSchema = z.enum(['EMPLOYEE', 'STOCKIST', 'HOSPITAL', 'DOCTOR']);
+export const SalesRoleSchema = z.enum(['NSM', 'ZSM', 'RSM', 'ASM', 'MR', 'ADMIN']);
+export const EntityHospitalTypeSchema = z.enum([
+  'GOVT_HOSPITAL',
+  'PRIVATE_HOSPITAL',
+  'NURSING_HOME',
+  'CLINIC',
+  'PHARMACY',
+]);
+
 export const CreatePersonSchema = z.object({
+  entityType: EntityTypeSchema.optional().default('DOCTOR'),
+  salesRole: SalesRoleSchema.optional().nullable(),
+  reportingToId: z.string().uuid().optional().nullable(),
+  zone: z.string().max(120).optional().nullable(),
+  region: z.string().max(120).optional().nullable(),
+  stockistCode: z.string().max(80).optional().nullable(),
+  gstin: z.string().max(20).optional().nullable(),
+  creditLimit: z.union([z.string(), z.number()]).optional().nullable(),
+  outstandingAmount: z.union([z.string(), z.number()]).optional().nullable(),
+  entityHospitalType: EntityHospitalTypeSchema.optional().nullable(),
+  bedCount: z.coerce.number().int().optional().nullable(),
   name: z.string().min(2).max(100),
   designation: z.enum(['DOCTOR', 'PHARMACIST', 'NURSE', 'HOSPITAL_ADMIN', 'OTHER']),
   specialty: z.string().optional(),

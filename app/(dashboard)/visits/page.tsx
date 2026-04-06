@@ -24,6 +24,7 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectOptionItems,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -160,9 +161,11 @@ export default function VisitsPage() {
                   <SelectValue placeholder="Any" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all__">Any</SelectItem>
+                  <SelectItem value="__all__" label="Any">
+                    Any
+                  </SelectItem>
                   {(users ?? []).map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
+                    <SelectItem key={u.id} value={u.id} label={u.name}>
                       {u.name}
                     </SelectItem>
                   ))}
@@ -179,12 +182,10 @@ export default function VisitsPage() {
                   <SelectValue placeholder="Any" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all__">Any</SelectItem>
-                  {VISIT_PURPOSES.map((p) => (
-                    <SelectItem key={p.value} value={p.value}>
-                      {p.label}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="__all__" label="Any">
+                    Any
+                  </SelectItem>
+                  <SelectOptionItems options={VISIT_PURPOSES} />
                 </SelectContent>
               </Select>
             </div>
@@ -198,12 +199,10 @@ export default function VisitsPage() {
                   <SelectValue placeholder="Any" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all__">Any</SelectItem>
-                  {VISIT_STATUSES.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>
-                      {s.label}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="__all__" label="Any">
+                    Any
+                  </SelectItem>
+                  <SelectOptionItems options={VISIT_STATUSES} />
                 </SelectContent>
               </Select>
             </div>

@@ -12,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
-  SelectItem,
+  SelectOptionItems,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -95,11 +95,7 @@ export function ProductForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {PRODUCT_CATEGORIES.map((c) => (
-                <SelectItem key={c.value} value={c.value}>
-                  {c.label}
-                </SelectItem>
-              ))}
+              <SelectOptionItems options={PRODUCT_CATEGORIES} />
             </SelectContent>
           </Select>
         </div>
