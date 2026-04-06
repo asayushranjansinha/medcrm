@@ -12,6 +12,7 @@ const SORTABLE = {
   stockQty: products.stockQty,
   manufacturer: products.manufacturer,
   expiryDate: products.expiryDate,
+  isActive: products.isActive,
   createdAt: products.createdAt,
 } as const;
 

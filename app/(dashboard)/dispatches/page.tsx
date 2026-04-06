@@ -1,9 +1,10 @@
 'use client';
 
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { DataTable } from '@/components/shared/data-table';
+import { DataTableColumnHeader } from '@/components/shared/data-table-column-header';
 import { PageHeader } from '@/components/shared/page-header';
 import { ExportButton } from '@/components/reports/export-button';
 import { DispatchStatusBadge } from '@/components/shared/status-badge';
@@ -25,6 +26,8 @@ import {
   SelectContent,
   SelectItem,
   SelectOptionItems,
+  selectItemsRecordFromOptions,
+  selectItemsRecordFromPairs,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -34,9 +37,15 @@ import { useProducts } from '@/hooks/use-products';
 import { usePersons } from '@/hooks/use-persons';
 import { Filter } from 'lucide-react';
 
+function selectFilterValue(v: string | null | undefined) {
+  if (!v || v === '__all__') return '';
+  return v;
+}
+
 export default function DispatchesPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'dispatchDate', desc: true }]);
   const [filters, setFilters] = useState({
     dateFrom: '',
     dateTo: '',
@@ -51,6 +60,40 @@ export default function DispatchesPage() {
   const { data: products } = useProducts({ page: '1', pageSize: '100', sortBy: 'name', sortOrder: 'asc' });
   const { data: persons } = usePersons({ page: '1', pageSize: '100', sortBy: 'name', sortOrder: 'asc' });
 
+  const productFilterItems = useMemo(
+    () =>
+      selectItemsRecordFromPairs(
+        (products?.items ?? []).map((p) => ({ id: p.id, label: p.name }))
+      ),
+    [products?.items]
+  );
+  const personFilterItems = useMemo(
+    () =>
+      selectItemsRecordFromPairs(
+        (persons?.items ?? []).map((p) => ({ id: p.id, label: p.name }))
+      ),
+    [persons?.items]
+  );
+  const userFilterItems = useMemo(
+    () => selectItemsRecordFromPairs((users ?? []).map((u) => ({ id: u.id, label: u.name }))),
+    [users]
+  );
+  const movementFilterItems = useMemo(
+    () => selectItemsRecordFromOptions([...MOVEMENT_TYPES]),
+    []
+  );
+  const dispatchTypeFilterItems = useMemo(
+    () => selectItemsRecordFromOptions([...DISPATCH_TYPES]),
+    []
+  );
+  const dispatchStatusFilterItems = useMemo(
+    () => selectItemsRecordFromOptions([...DISPATCH_STATUSES]),
+    []
+  );
+
+  const sortBy = sorting[0]?.id ?? 'dispatchDate';
+  const sortOrder = sorting[0]?.desc ? 'desc' : 'asc';
+
   const { data, isLoading } = useDispatches({
     page: String(page),
     pageSize: '25',
@@ -63,36 +106,54 @@ export default function DispatchesPage() {
     movementType: filters.movementType || undefined,
     status: filters.status || undefined,
     userId: filters.userId || undefined,
-    sortBy: 'dispatchDate',
-    sortOrder: 'desc',
+    sortBy,
+    sortOrder,
   });
 
   const columns = useMemo<ColumnDef<DispatchRow>[]>(
     () => [
-      { accessorKey: 'productName', header: 'Product' },
-      { accessorKey: 'personName', header: 'Recipient' },
-      { accessorKey: 'dispatchedByName', header: 'By' },
-      { accessorKey: 'movementType', header: 'Movement' },
-      { accessorKey: 'dispatchType', header: 'Category' },
-      { accessorKey: 'quantity', header: 'Qty' },
+      {
+        accessorKey: 'productName',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Product" />,
+      },
+      {
+        accessorKey: 'personName',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Recipient" />,
+      },
+      {
+        accessorKey: 'dispatchedByName',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="By" />,
+      },
+      {
+        accessorKey: 'movementType',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Movement" />,
+      },
+      {
+        accessorKey: 'dispatchType',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Category" />,
+      },
+      {
+        accessorKey: 'quantity',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Qty" />,
+      },
       {
         accessorKey: 'dispatchDate',
-        header: 'Date',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Date" />,
         cell: ({ row }) => formatDate(row.original.dispatchDate),
       },
       {
         accessorKey: 'status',
-        header: 'Status',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
         cell: ({ row }) => <DispatchStatusBadge status={row.original.status} />,
       },
       {
         accessorKey: 'invoiceNumber',
-        header: 'Invoice',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Invoice" />,
         cell: ({ row }) => row.original.invoiceNumber ?? '—',
       },
       {
         accessorKey: 'totalValue',
-        header: 'Value',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Value" />,
         cell: ({ row }) => formatCurrency(row.original.totalValue),
       },
     ],
@@ -118,8 +179,8 @@ export default function DispatchesPage() {
             movementType: filters.movementType || undefined,
             status: filters.status || undefined,
             userId: filters.userId || undefined,
-            sortBy: 'dispatchDate',
-            sortOrder: 'desc',
+            sortBy,
+            sortOrder,
           }}
         />
         <Link href="/dispatches/new" className={cn(buttonVariants())}>
@@ -162,7 +223,8 @@ export default function DispatchesPage() {
               <Label>Product</Label>
               <Select
                 value={filters.productId || '__all__'}
-                onValueChange={(v) => setFilters((f) => ({ ...f, productId: v === '__all__' ? '' : v }))}
+                onValueChange={(v) => setFilters((f) => ({ ...f, productId: selectFilterValue(v) }))}
+                items={productFilterItems}
               >
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Any" />
@@ -183,7 +245,8 @@ export default function DispatchesPage() {
               <Label>HCP</Label>
               <Select
                 value={filters.personId || '__all__'}
-                onValueChange={(v) => setFilters((f) => ({ ...f, personId: v === '__all__' ? '' : v }))}
+                onValueChange={(v) => setFilters((f) => ({ ...f, personId: selectFilterValue(v) }))}
+                items={personFilterItems}
               >
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Any" />
@@ -205,8 +268,9 @@ export default function DispatchesPage() {
               <Select
                 value={filters.movementType || '__all__'}
                 onValueChange={(v) =>
-                  setFilters((f) => ({ ...f, movementType: v === '__all__' ? '' : v }))
+                  setFilters((f) => ({ ...f, movementType: selectFilterValue(v) }))
                 }
+                items={movementFilterItems}
               >
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Any" />
@@ -224,8 +288,9 @@ export default function DispatchesPage() {
               <Select
                 value={filters.dispatchType || '__all__'}
                 onValueChange={(v) =>
-                  setFilters((f) => ({ ...f, dispatchType: v === '__all__' ? '' : v }))
+                  setFilters((f) => ({ ...f, dispatchType: selectFilterValue(v) }))
                 }
+                items={dispatchTypeFilterItems}
               >
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Any" />
@@ -242,7 +307,8 @@ export default function DispatchesPage() {
               <Label>Status</Label>
               <Select
                 value={filters.status || '__all__'}
-                onValueChange={(v) => setFilters((f) => ({ ...f, status: v === '__all__' ? '' : v }))}
+                onValueChange={(v) => setFilters((f) => ({ ...f, status: selectFilterValue(v) }))}
+                items={dispatchStatusFilterItems}
               >
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Any" />
@@ -259,7 +325,8 @@ export default function DispatchesPage() {
               <Label>MR</Label>
               <Select
                 value={filters.userId || '__all__'}
-                onValueChange={(v) => setFilters((f) => ({ ...f, userId: v === '__all__' ? '' : v }))}
+                onValueChange={(v) => setFilters((f) => ({ ...f, userId: selectFilterValue(v) }))}
+                items={userFilterItems}
               >
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Any" />
@@ -288,11 +355,18 @@ export default function DispatchesPage() {
         pageSize={25}
         total={total}
         onPageChange={setPage}
+        searchValue={search}
         onSearchChange={(v) => {
           setSearch(v);
           setPage(1);
         }}
-        searchPlaceholder="Search product, HCP, MR…"
+        searchPlaceholder="Search product, HCP, city, MR, invoice, status…"
+        sorting={sorting}
+        onSortingChange={(next) => {
+          setSorting(next);
+          setPage(1);
+        }}
+        getRowId={(row) => row.id}
       />
     </div>
   );

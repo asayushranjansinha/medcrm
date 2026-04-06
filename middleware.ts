@@ -31,6 +31,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  if (pathname === '/') {
+    return NextResponse.next();
+  }
+
   if (!isLoggedIn) {
     const login = new URL('/login', request.url);
     login.searchParams.set('callbackUrl', pathname);

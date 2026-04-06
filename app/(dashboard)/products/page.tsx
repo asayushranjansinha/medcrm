@@ -1,9 +1,10 @@
 'use client';
 
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { DataTable } from '@/components/shared/data-table';
+import { DataTableColumnHeader } from '@/components/shared/data-table-column-header';
 import { PageHeader } from '@/components/shared/page-header';
 import { ExportButton } from '@/components/reports/export-button';
 import { buttonVariants } from '@/components/ui/button';
@@ -18,6 +19,7 @@ import {
   SelectContent,
   SelectItem,
   SelectOptionItems,
+  selectItemsRecordFromOptions,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -29,24 +31,50 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { PRODUCT_CATEGORIES } from '@/lib/constants';
+import {
+  ACTIVE_STATUS_FILTERS,
+  PRODUCT_CATEGORIES,
+  PRODUCT_STOCK_FILTERS,
+} from '@/lib/constants';
 import { Filter } from 'lucide-react';
+
+function selectFilterValue(v: string | null | undefined) {
+  if (!v || v === '__all__') return '';
+  return v;
+}
 
 export default function ProductsPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'name', desc: false }]);
   const [filters, setFilters] = useState({
     category: '',
     stock: '',
     isActive: '',
   });
 
+  const categoryFilterItems = useMemo(
+    () => selectItemsRecordFromOptions([...PRODUCT_CATEGORIES]),
+    []
+  );
+  const stockFilterItems = useMemo(
+    () => selectItemsRecordFromOptions([...PRODUCT_STOCK_FILTERS]),
+    []
+  );
+  const activeFilterItems = useMemo(
+    () => selectItemsRecordFromOptions([...ACTIVE_STATUS_FILTERS]),
+    []
+  );
+
+  const sortBy = sorting[0]?.id ?? 'name';
+  const sortOrder = sorting[0]?.desc ? 'desc' : 'asc';
+
   const { data, isLoading } = useProducts({
     page: String(page),
     pageSize: '25',
     search: search || undefined,
-    sortBy: 'name',
-    sortOrder: 'asc',
+    sortBy,
+    sortOrder,
     category: filters.category || undefined,
     stock: filters.stock || undefined,
     isActive: filters.isActive || undefined,
@@ -56,23 +84,29 @@ export default function ProductsPage() {
     () => [
       {
         accessorKey: 'name',
-        header: 'Name',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
         cell: ({ row }) => (
           <Link className="text-primary font-medium hover:underline" href={`/products/${row.original.id}`}>
             {row.original.name}
           </Link>
         ),
       },
-      { accessorKey: 'genericName', header: 'Generic' },
-      { accessorKey: 'category', header: 'Category' },
+      {
+        accessorKey: 'genericName',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Generic" />,
+      },
+      {
+        accessorKey: 'category',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Category" />,
+      },
       {
         accessorKey: 'mrp',
-        header: 'MRP',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="MRP" />,
         cell: ({ row }) => formatCurrency(row.original.mrp),
       },
       {
         accessorKey: 'stockQty',
-        header: 'Stock',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Stock" />,
         cell: ({ row }) => {
           const q = row.original.stockQty;
           return (
@@ -91,19 +125,23 @@ export default function ProductsPage() {
           );
         },
       },
-      { accessorKey: 'manufacturer', header: 'Manufacturer' },
+      {
+        accessorKey: 'manufacturer',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Manufacturer" />,
+      },
       {
         accessorKey: 'expiryDate',
-        header: 'Expiry',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Expiry" />,
         cell: ({ row }) => formatDate(row.original.expiryDate),
       },
       {
         accessorKey: 'isActive',
-        header: 'Status',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
         cell: ({ row }) => (row.original.isActive ? 'Active' : 'Inactive'),
       },
       {
         id: 'actions',
+        enableSorting: false,
         cell: ({ row }) => (
           <Link
             href={`/products/${row.original.id}`}
@@ -133,8 +171,8 @@ export default function ProductsPage() {
             category: filters.category || undefined,
             stock: filters.stock || undefined,
             isActive: filters.isActive || undefined,
-            sortBy: 'name',
-            sortOrder: 'asc',
+            sortBy,
+            sortOrder,
           }}
         />
         <Link href="/products/new" className={cn(buttonVariants())}>
@@ -161,8 +199,9 @@ export default function ProductsPage() {
                 <Select
                   value={filters.category || '__all__'}
                   onValueChange={(v) =>
-                    setFilters((f) => ({ ...f, category: v === '__all__' ? '' : v }))
+                    setFilters((f) => ({ ...f, category: selectFilterValue(v) }))
                   }
+                  items={categoryFilterItems}
                 >
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Any" />
@@ -179,7 +218,8 @@ export default function ProductsPage() {
                 <Label>Stock</Label>
                 <Select
                   value={filters.stock || '__all__'}
-                  onValueChange={(v) => setFilters((f) => ({ ...f, stock: v === '__all__' ? '' : v }))}
+                  onValueChange={(v) => setFilters((f) => ({ ...f, stock: selectFilterValue(v) }))}
+                  items={stockFilterItems}
                 >
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Any" />
@@ -188,15 +228,7 @@ export default function ProductsPage() {
                     <SelectItem value="__all__" label="Any">
                       Any
                     </SelectItem>
-                    <SelectItem value="in" label="In stock (≥10)">
-                      In stock (≥10)
-                    </SelectItem>
-                    <SelectItem value="low" label="Low (<10)">
-                      Low (&lt;10)
-                    </SelectItem>
-                    <SelectItem value="out" label="Out (0)">
-                      Out (0)
-                    </SelectItem>
+                    <SelectOptionItems options={[...PRODUCT_STOCK_FILTERS]} />
                   </SelectContent>
                 </Select>
               </div>
@@ -205,8 +237,9 @@ export default function ProductsPage() {
                 <Select
                   value={filters.isActive || '__all__'}
                   onValueChange={(v) =>
-                    setFilters((f) => ({ ...f, isActive: v === '__all__' ? '' : v }))
+                    setFilters((f) => ({ ...f, isActive: selectFilterValue(v) }))
                   }
+                  items={activeFilterItems}
                 >
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Any" />
@@ -215,12 +248,7 @@ export default function ProductsPage() {
                     <SelectItem value="__all__" label="Any">
                       Any
                     </SelectItem>
-                    <SelectItem value="true" label="Active">
-                      Active
-                    </SelectItem>
-                    <SelectItem value="false" label="Inactive">
-                      Inactive
-                    </SelectItem>
+                    <SelectOptionItems options={[...ACTIVE_STATUS_FILTERS]} />
                   </SelectContent>
                 </Select>
               </div>
@@ -242,6 +270,11 @@ export default function ProductsPage() {
           setPage(1);
         }}
         searchPlaceholder="Search name, generic, manufacturer…"
+        sorting={sorting}
+        onSortingChange={(next) => {
+          setSorting(next.length ? next : [{ id: 'name', desc: false }]);
+          setPage(1);
+        }}
       />
     </div>
   );

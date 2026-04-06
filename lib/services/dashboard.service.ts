@@ -1,4 +1,5 @@
-import { and, count, desc, eq, gte, lt, lte } from 'drizzle-orm';
+import { and, count, desc, eq, gte, inArray, lt, lte } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { db } from '@/lib/db';
 import {
   dispatches,
@@ -17,6 +18,50 @@ import {
 } from '@/lib/rbac';
 import type { SessionUser } from '@/types';
 
+export type DashboardStats = {
+  totalPersons: number;
+  visitsThisMonth: number;
+  dispatchesThisMonth: number;
+  revenueThisMonth: number;
+  trends: {
+    totalPersonsPct: number;
+    visitsPct: number;
+    dispatchesPct: number;
+    revenuePct: number;
+  };
+  monthlySalesTrend: { month: string; visitCount: number; orderValue: number }[];
+  topProducts: { productId: string; name: string; totalQty: number }[];
+  visitStatusBreakdown: Record<string, number>;
+  hcpCategoryDistribution: Record<string, number>;
+  recentActivity: { at: Date; label: string; detail: string; actor: string }[];
+  lowStockAlerts: number;
+  targetAchievementPctAvg: number;
+  mrTargetVsAchievement: { mrName: string; target: number; achieved: number; pct: number }[];
+  mrVisitCompletion: {
+    mrName: string;
+    planned: number;
+    completed: number;
+    missed: number;
+    completionRate: number;
+  }[];
+  lowStockStockistLines: {
+    stockistName: string;
+    productName: string;
+    currentQty: number;
+    stockistId: string;
+  }[];
+  topStockists: { stockistName: string; totalValue: number; totalUnits: number }[];
+  territoryRevenue: { territory: string; revenue: number }[];
+  visitOutcomeTrend: {
+    month: string;
+    positive: number;
+    neutral: number;
+    negative: number;
+    notMet: number;
+  }[];
+  prescriptionCommitmentRate: number;
+};
+
 function startOfMonth(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), 1);
 }
@@ -32,7 +77,7 @@ function pctChange(current: number, previous: number) {
   return Math.round(((current - previous) / previous) * 1000) / 10;
 }
 
-export async function getDashboardStats(session: SessionUser) {
+export async function getDashboardStats(session: SessionUser): Promise<DashboardStats> {
   const now = new Date();
   const thisMonthStart = startOfMonth(now);
   const prevMonthStart = addMonths(thisMonthStart, -1);
@@ -315,6 +360,279 @@ export async function getDashboardStats(session: SessionUser) {
       ? Math.round((targetPcts.reduce((s, x) => s + x, 0) / targetPcts.length) * 10) / 10
       : 0;
 
+  const mtAggRows = await db
+    .select({
+      employeeId: monthlyTargets.employeeId,
+      target: monthlyTargets.targetValue,
+      achieved: monthlyTargets.achievedValue,
+      mrName: persons.name,
+      territory: persons.territory,
+      assignedTo: persons.assignedToUserId,
+    })
+    .from(monthlyTargets)
+    .innerJoin(persons, eq(monthlyTargets.employeeId, persons.id))
+    .where(
+      and(
+        eq(monthlyTargets.month, nowMonth),
+        eq(monthlyTargets.year, nowYear),
+        eq(persons.entityType, 'EMPLOYEE'),
+        eq(persons.salesRole, 'MR'),
+        eq(persons.isActive, true)
+      )
+    );
+
+  const mrTargetMap = new Map<
+    string,
+    { mrName: string; target: number; achieved: number; territory: string | null; assignedTo: string | null }
+  >();
+  for (const r of mtAggRows) {
+    if (!canAccessPerson(session, r.territory, r.assignedTo)) continue;
+    const t = Number.parseFloat(String(r.target));
+    const a = Number.parseFloat(String(r.achieved));
+    const prev = mrTargetMap.get(r.employeeId);
+    if (!prev) {
+      mrTargetMap.set(r.employeeId, {
+        mrName: r.mrName,
+        target: t,
+        achieved: a,
+        territory: r.territory,
+        assignedTo: r.assignedTo,
+      });
+    } else {
+      prev.target += t;
+      prev.achieved += a;
+    }
+  }
+  const mrTargetVsAchievement = [...mrTargetMap.values()]
+    .map((row) => {
+      const { target, achieved } = row;
+      const pct =
+        target > 0 ? Math.round((achieved / target) * 100) : achieved > 0 ? 100 : 0;
+      return { mrName: row.mrName, target, achieved, pct };
+    })
+    .sort((a, b) => b.pct - a.pct)
+    .slice(0, 10);
+
+  const vCompletionRows = await db
+    .select({
+      visit: visits,
+      userName: users.name,
+      userRole: users.role,
+      territory: persons.territory,
+      assignedTo: persons.assignedToUserId,
+    })
+    .from(visits)
+    .innerJoin(users, eq(visits.userId, users.id))
+    .innerJoin(persons, eq(visits.personId, persons.id))
+    .where(and(gte(visits.visitDate, thisMonthStart), lte(visits.visitDate, now)));
+
+  const mrVisitMap = new Map<
+    string,
+    { mrName: string; completed: number; missed: number; openPlanned: number }
+  >();
+  for (const r of vCompletionRows) {
+    if (r.userRole !== 'MR') continue;
+    if (!visitAccessible(session, r.territory, r.assignedTo, r.visit.userId)) continue;
+    const uid = r.visit.userId;
+    if (!mrVisitMap.has(uid)) {
+      mrVisitMap.set(uid, { mrName: r.userName ?? 'MR', completed: 0, missed: 0, openPlanned: 0 });
+    }
+    const agg = mrVisitMap.get(uid)!;
+    if (r.visit.status === 'COMPLETED') agg.completed++;
+    else if (r.visit.status === 'CANCELLED') agg.missed++;
+    else agg.openPlanned++;
+  }
+  const mrVisitCompletion = [...mrVisitMap.values()]
+    .map((row) => {
+      const planned = row.completed + row.missed + row.openPlanned;
+      const completionRate =
+        planned > 0 ? Math.round((row.completed / planned) * 100) : 0;
+      return {
+        mrName: row.mrName,
+        planned,
+        completed: row.completed,
+        missed: row.missed,
+        completionRate,
+      };
+    })
+    .sort((a, b) => b.completionRate - a.completionRate);
+
+  const lowInvDetailRows = await db
+    .select({
+      stockistId: stockistInventory.personId,
+      stockistName: persons.name,
+      productName: products.name,
+      currentQty: stockistInventory.currentQty,
+      territory: persons.territory,
+      assignedTo: persons.assignedToUserId,
+    })
+    .from(stockistInventory)
+    .innerJoin(persons, eq(stockistInventory.personId, persons.id))
+    .innerJoin(products, eq(stockistInventory.productId, products.id))
+    .where(
+      and(lt(stockistInventory.currentQty, 10), eq(persons.entityType, 'STOCKIST'), eq(persons.isActive, true))
+    );
+
+  const lowStockStockistLines = lowInvDetailRows
+    .filter((r) => canAccessPerson(session, r.territory, r.assignedTo))
+    .sort((a, b) => a.currentQty - b.currentQty)
+    .slice(0, 8)
+    .map((r) => ({
+      stockistName: r.stockistName,
+      productName: r.productName,
+      currentQty: r.currentQty,
+      stockistId: r.stockistId,
+    }));
+
+  const stockDispatchRows = await db
+    .select({
+      dispatch: dispatches,
+      territory: persons.territory,
+      assignedTo: persons.assignedToUserId,
+    })
+    .from(dispatches)
+    .innerJoin(persons, eq(dispatches.personId, persons.id))
+    .where(
+      and(
+        inArray(dispatches.movementType, ['STOCKIST_TO_HOSPITAL', 'STOCKIST_TO_RETAILER']),
+        gte(dispatches.dispatchDate, thisMonthStart),
+        lte(dispatches.dispatchDate, now)
+      )
+    );
+
+  const fromAgg = new Map<string, { totalValue: number; totalUnits: number }>();
+  for (const r of stockDispatchRows) {
+    if (!dispatchAccessible(session, r.territory, r.assignedTo, r.dispatch.userId)) continue;
+    const fid = r.dispatch.fromEntityId;
+    if (!fid) continue;
+    const val = Number.parseFloat(String(r.dispatch.totalValue ?? 0));
+    const prev = fromAgg.get(fid) ?? { totalValue: 0, totalUnits: 0 };
+    prev.totalValue += val;
+    prev.totalUnits += r.dispatch.quantity;
+    fromAgg.set(fid, prev);
+  }
+  const fromIds = [...fromAgg.keys()];
+  const stockistRowsForTop =
+    fromIds.length > 0
+      ? await db.query.persons.findMany({
+          where: and(inArray(persons.id, fromIds), eq(persons.entityType, 'STOCKIST')),
+        })
+      : [];
+  const stockistIdToName = new Map(stockistRowsForTop.map((p) => [p.id, p.name]));
+  const topStockists = [...fromAgg.entries()]
+    .filter(([id]) => stockistIdToName.has(id))
+    .map(([id, a]) => ({
+      stockistName: stockistIdToName.get(id)!,
+      totalValue: a.totalValue,
+      totalUnits: a.totalUnits,
+    }))
+    .sort((a, b) => b.totalValue - a.totalValue)
+    .slice(0, 6);
+
+  const assignedUser = alias(users, 'assigned_user');
+  const visitUserTbl = alias(users, 'visit_user');
+  const terrRows = await db
+    .select({
+      visit: visits,
+      assignedTerritory: assignedUser.territory,
+      visitUserTerritory: visitUserTbl.territory,
+      personTerritory: persons.territory,
+      assignedTo: persons.assignedToUserId,
+    })
+    .from(visits)
+    .innerJoin(persons, eq(visits.personId, persons.id))
+    .leftJoin(assignedUser, eq(persons.assignedToUserId, assignedUser.id))
+    .leftJoin(visitUserTbl, eq(visits.userId, visitUserTbl.id))
+    .where(
+      and(
+        eq(visits.status, 'COMPLETED'),
+        eq(visits.orderTaken, true),
+        gte(visits.visitDate, thisMonthStart),
+        lte(visits.visitDate, now)
+      )
+    );
+
+  const terrTotals = new Map<string, number>();
+  for (const r of terrRows) {
+    if (!visitAccessible(session, r.personTerritory, r.assignedTo, r.visit.userId)) continue;
+    const territory =
+      (r.assignedTerritory && r.assignedTerritory.trim()) ||
+      (r.visitUserTerritory && r.visitUserTerritory.trim()) ||
+      'Unassigned';
+    const rev = Number.parseFloat(String(r.visit.orderValue ?? 0));
+    terrTotals.set(territory, (terrTotals.get(territory) ?? 0) + rev);
+  }
+  const territoryRevenue = [...terrTotals.entries()]
+    .map(([territory, revenue]) => ({ territory, revenue }))
+    .sort((a, b) => b.revenue - a.revenue);
+
+  const sixMonthStart = addMonths(thisMonthStart, -5);
+  const outcomeVisitRows = await db
+    .select({
+      visit: visits,
+      territory: persons.territory,
+      assignedTo: persons.assignedToUserId,
+    })
+    .from(visits)
+    .innerJoin(persons, eq(visits.personId, persons.id))
+    .where(and(gte(visits.visitDate, sixMonthStart), lte(visits.visitDate, now)));
+
+  const monthWindows: { label: string; start: Date; end: Date }[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const mStart = addMonths(thisMonthStart, -i);
+    monthWindows.push({
+      label: mStart.toLocaleString('en-US', { month: 'short' }),
+      start: mStart,
+      end: addMonths(mStart, 1),
+    });
+  }
+  const visitOutcomeTrend = monthWindows.map((m) => ({
+    month: m.label,
+    positive: 0,
+    neutral: 0,
+    negative: 0,
+    notMet: 0,
+  }));
+  for (const r of outcomeVisitRows) {
+    if (!visitAccessible(session, r.territory, r.assignedTo, r.visit.userId)) continue;
+    const d = r.visit.visitDate;
+    const idx = monthWindows.findIndex((m) => d >= m.start && d < m.end);
+    if (idx < 0) continue;
+    const o = r.visit.outcome;
+    if (o === 'POSITIVE') visitOutcomeTrend[idx].positive++;
+    else if (o === 'NEUTRAL') visitOutcomeTrend[idx].neutral++;
+    else if (o === 'NEGATIVE') visitOutcomeTrend[idx].negative++;
+    else if (o === 'NOT_MET') visitOutcomeTrend[idx].notMet++;
+  }
+
+  const docVisitRows = await db
+    .select({
+      visit: visits,
+      territory: persons.territory,
+      assignedTo: persons.assignedToUserId,
+    })
+    .from(visits)
+    .innerJoin(persons, eq(visits.personId, persons.id))
+    .where(
+      and(
+        eq(visits.visitType, 'DOCTOR_VISIT'),
+        eq(visits.status, 'COMPLETED'),
+        gte(visits.visitDate, thisMonthStart),
+        lte(visits.visitDate, now)
+      )
+    );
+  let prescriptionCommitNumer = 0;
+  let prescriptionCommitDenom = 0;
+  for (const r of docVisitRows) {
+    if (!visitAccessible(session, r.territory, r.assignedTo, r.visit.userId)) continue;
+    prescriptionCommitDenom++;
+    if (r.visit.prescriptionCommitment) prescriptionCommitNumer++;
+  }
+  const prescriptionCommitmentRate =
+    prescriptionCommitDenom > 0
+      ? Math.round((prescriptionCommitNumer / prescriptionCommitDenom) * 100)
+      : 0;
+
   return {
     totalPersons,
     visitsThisMonth,
@@ -333,6 +651,13 @@ export async function getDashboardStats(session: SessionUser) {
     recentActivity,
     lowStockAlerts,
     targetAchievementPctAvg,
+    mrTargetVsAchievement,
+    mrVisitCompletion,
+    lowStockStockistLines,
+    topStockists,
+    territoryRevenue,
+    visitOutcomeTrend,
+    prescriptionCommitmentRate,
   };
 }
 

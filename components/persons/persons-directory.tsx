@@ -1,11 +1,12 @@
 'use client';
 
-import type { ColumnDef, RowSelectionState } from '@tanstack/react-table';
+import type { ColumnDef, RowSelectionState, SortingState } from '@tanstack/react-table';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from '@/components/ui/sonner';
 import { DataTable } from '@/components/shared/data-table';
+import { DataTableColumnHeader } from '@/components/shared/data-table-column-header';
 import { PageHeader } from '@/components/shared/page-header';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { ExportButton } from '@/components/reports/export-button';
@@ -25,6 +26,8 @@ import {
   SelectContent,
   SelectItem,
   SelectOptionItems,
+  selectItemsRecordFromOptions,
+  selectItemsRecordFromPairs,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -32,6 +35,7 @@ import { useBulkDeactivatePersons, usePersons, type PersonRow } from '@/hooks/us
 import { useUsers } from '@/hooks/use-users';
 import { formatDate } from '@/lib/utils';
 import {
+  ACTIVE_STATUS_FILTERS,
   DESIGNATIONS,
   ENTITY_TYPES,
   HOSPITAL_TYPES,
@@ -47,6 +51,7 @@ export type PersonsDirectoryProps = {
   description?: string;
   exportFilenamePrefix?: string;
   addLabel?: string;
+  searchPlaceholder?: string;
 };
 
 function selectFilterValue(v: string | null | undefined) {
@@ -60,12 +65,14 @@ export function PersonsDirectory({
   description = 'People and organizations',
   exportFilenamePrefix = 'persons',
   addLabel = 'Add person',
+  searchPlaceholder = 'Search name, hospital, city…',
 }: PersonsDirectoryProps) {
   const searchParams = useSearchParams();
   const urlEntity = searchParams.get('entityType') as PersonsDirectoryProps['lockedEntityType'] | null;
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'name', desc: false }]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [confirmBulk, setConfirmBulk] = useState(false);
   const [filters, setFilters] = useState({
@@ -87,12 +94,15 @@ export function PersonsDirectory({
 
   const entityTypeParam = lockedEntityType ?? (filters.entityType || undefined);
 
+  const sortBy = sorting[0]?.id ?? 'name';
+  const sortOrder = sorting[0]?.desc ? 'desc' : 'asc';
+
   const { data, isLoading } = usePersons({
     page: String(page),
     pageSize: '25',
     search: search || undefined,
-    sortBy: 'name',
-    sortOrder: 'asc',
+    sortBy,
+    sortOrder,
     city: filters.city || undefined,
     state: filters.state || undefined,
     designation: filters.designation || undefined,
@@ -106,11 +116,43 @@ export function PersonsDirectory({
   const bulk = useBulkDeactivatePersons();
   const { data: users } = useUsers();
 
+  const entityTypeFilterItems = useMemo(
+    () => selectItemsRecordFromOptions([...ENTITY_TYPES]),
+    []
+  );
+  const cityFilterItems = useMemo(
+    () => ({
+      __all__: 'Any',
+      ...Object.fromEntries(CITIES.map((c) => [c, c] as [string, string])),
+    }),
+    []
+  );
+  const designationFilterItems = useMemo(
+    () => selectItemsRecordFromOptions([...DESIGNATIONS]),
+    []
+  );
+  const hospitalTypeFilterItems = useMemo(
+    () => selectItemsRecordFromOptions([...HOSPITAL_TYPES]),
+    []
+  );
+  const categoryFilterItems = useMemo(
+    () => selectItemsRecordFromOptions([...PERSON_CATEGORIES]),
+    []
+  );
+  const assignedUserFilterItems = useMemo(
+    () => selectItemsRecordFromPairs((users ?? []).map((u) => ({ id: u.id, label: u.name }))),
+    [users]
+  );
+  const activeFilterItems = useMemo(
+    () => selectItemsRecordFromOptions([...ACTIVE_STATUS_FILTERS]),
+    []
+  );
+
   const columns = useMemo<ColumnDef<PersonRow>[]>(
     () => [
       {
         accessorKey: 'name',
-        header: 'Name',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
         cell: ({ row }) => (
           <Link className="text-primary font-medium hover:underline" href={`/persons/${row.original.id}`}>
             {row.original.name}
@@ -119,34 +161,54 @@ export function PersonsDirectory({
       },
       {
         accessorKey: 'entityType',
-        header: 'Entity',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Entity" />,
         cell: ({ row }) => (
           <Badge variant="secondary">{row.original.entityType ?? 'DOCTOR'}</Badge>
         ),
       },
-      { accessorKey: 'salesRole', header: 'Role', cell: ({ row }) => row.original.salesRole ?? '—' },
-      { accessorKey: 'designation', header: 'Designation' },
-      { accessorKey: 'specialty', header: 'Specialty' },
-      { accessorKey: 'hospitalName', header: 'Hospital / Org' },
-      { accessorKey: 'city', header: 'City' },
+      {
+        accessorKey: 'salesRole',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Role" />,
+        cell: ({ row }) => row.original.salesRole ?? '—',
+      },
+      {
+        accessorKey: 'designation',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Designation" />,
+      },
+      {
+        accessorKey: 'specialty',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Specialty" />,
+      },
+      {
+        accessorKey: 'hospitalName',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Hospital / Org" />,
+      },
+      {
+        accessorKey: 'city',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="City" />,
+      },
       {
         accessorKey: 'category',
-        header: 'Category',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Category" />,
         cell: ({ row }) => <Badge variant="outline">{row.original.category}</Badge>,
       },
       {
         accessorKey: 'lastVisitDate',
-        header: 'Last visit',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Last visit" />,
         cell: ({ row }) => formatDate(row.original.lastVisitDate),
       },
-      { accessorKey: 'totalVisits', header: 'Visits' },
+      {
+        accessorKey: 'totalVisits',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Visits" />,
+      },
       {
         accessorKey: 'assignedMrName',
-        header: 'Assigned MR',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Assigned MR" />,
         cell: ({ row }) => row.original.assignedMrName ?? '—',
       },
       {
         id: 'actions',
+        enableSorting: false,
         header: '',
         cell: ({ row }) => (
           <Link
@@ -176,8 +238,8 @@ export function PersonsDirectory({
     assignedToUserId: filters.assignedToUserId || undefined,
     isActive: filters.isActive || undefined,
     entityType: entityTypeParam,
-    sortBy: 'name',
-    sortOrder: 'asc',
+    sortBy,
+    sortOrder,
   };
 
   async function runBulkDeactivate() {
@@ -232,6 +294,7 @@ export function PersonsDirectory({
                         entityType: selectFilterValue(v),
                       }))
                     }
+                    items={entityTypeFilterItems}
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Any" />
@@ -240,7 +303,7 @@ export function PersonsDirectory({
                       <SelectItem value="__all__" label="Any">
                         Any
                       </SelectItem>
-                      <SelectOptionItems options={ENTITY_TYPES} />
+                      <SelectOptionItems options={[...ENTITY_TYPES]} />
                     </SelectContent>
                   </Select>
                 </div>
@@ -250,6 +313,7 @@ export function PersonsDirectory({
                 <Select
                   value={filters.city || '__all__'}
                   onValueChange={(v) => setFilters((f) => ({ ...f, city: selectFilterValue(v) }))}
+                  items={cityFilterItems}
                 >
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Any" />
@@ -273,6 +337,7 @@ export function PersonsDirectory({
                   onValueChange={(v) =>
                     setFilters((f) => ({ ...f, designation: selectFilterValue(v) }))
                   }
+                  items={designationFilterItems}
                 >
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Any" />
@@ -292,6 +357,7 @@ export function PersonsDirectory({
                   onValueChange={(v) =>
                     setFilters((f) => ({ ...f, hospitalType: selectFilterValue(v) }))
                   }
+                  items={hospitalTypeFilterItems}
                 >
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Any" />
@@ -311,6 +377,7 @@ export function PersonsDirectory({
                   onValueChange={(v) =>
                     setFilters((f) => ({ ...f, category: selectFilterValue(v) }))
                   }
+                  items={categoryFilterItems}
                 >
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Any" />
@@ -330,6 +397,7 @@ export function PersonsDirectory({
                   onValueChange={(v) =>
                     setFilters((f) => ({ ...f, assignedToUserId: selectFilterValue(v) }))
                   }
+                  items={assignedUserFilterItems}
                 >
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Any" />
@@ -353,6 +421,7 @@ export function PersonsDirectory({
                   onValueChange={(v) =>
                     setFilters((f) => ({ ...f, isActive: selectFilterValue(v) }))
                   }
+                  items={activeFilterItems}
                 >
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Any" />
@@ -361,12 +430,7 @@ export function PersonsDirectory({
                     <SelectItem value="__all__" label="Any">
                       Any
                     </SelectItem>
-                    <SelectItem value="true" label="Active">
-                      Active
-                    </SelectItem>
-                    <SelectItem value="false" label="Inactive">
-                      Inactive
-                    </SelectItem>
+                    <SelectOptionItems options={[...ACTIVE_STATUS_FILTERS]} />
                   </SelectContent>
                 </Select>
               </div>
@@ -391,11 +455,17 @@ export function PersonsDirectory({
         pageSize={25}
         total={total}
         onPageChange={setPage}
+        searchValue={search}
         onSearchChange={(v) => {
           setSearch(v);
           setPage(1);
         }}
-        searchPlaceholder="Search name, hospital, city…"
+        searchPlaceholder={searchPlaceholder}
+        sorting={sorting}
+        onSortingChange={(next) => {
+          setSorting(next);
+          setPage(1);
+        }}
         enableRowSelection
         rowSelection={rowSelection}
         onRowSelectionChange={setRowSelection}

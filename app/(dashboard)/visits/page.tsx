@@ -25,12 +25,19 @@ import {
   SelectContent,
   SelectItem,
   SelectOptionItems,
+  selectItemsRecordFromOptions,
+  selectItemsRecordFromPairs,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
 import { VISIT_PURPOSES, VISIT_STATUSES } from '@/lib/constants';
 import { useUsers } from '@/hooks/use-users';
 import { Filter } from 'lucide-react';
+
+function selectFilterValue(v: string | null | undefined) {
+  if (!v || v === '__all__') return '';
+  return v;
+}
 
 export default function VisitsPage() {
   const [page, setPage] = useState(1);
@@ -44,6 +51,19 @@ export default function VisitsPage() {
     city: '',
   });
   const { data: users } = useUsers();
+
+  const userFilterItems = useMemo(
+    () => selectItemsRecordFromPairs((users ?? []).map((u) => ({ id: u.id, label: u.name }))),
+    [users]
+  );
+  const visitPurposeFilterItems = useMemo(
+    () => selectItemsRecordFromOptions([...VISIT_PURPOSES]),
+    []
+  );
+  const visitStatusFilterItems = useMemo(
+    () => selectItemsRecordFromOptions([...VISIT_STATUSES]),
+    []
+  );
 
   const { data, isLoading } = useVisits({
     page: String(page),
@@ -155,7 +175,8 @@ export default function VisitsPage() {
               <Label>MR</Label>
               <Select
                 value={filters.userId || '__all__'}
-                onValueChange={(v) => setFilters((f) => ({ ...f, userId: v === '__all__' ? '' : v }))}
+                onValueChange={(v) => setFilters((f) => ({ ...f, userId: selectFilterValue(v) }))}
+                items={userFilterItems}
               >
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Any" />
@@ -176,7 +197,8 @@ export default function VisitsPage() {
               <Label>Purpose</Label>
               <Select
                 value={filters.purpose || '__all__'}
-                onValueChange={(v) => setFilters((f) => ({ ...f, purpose: v === '__all__' ? '' : v }))}
+                onValueChange={(v) => setFilters((f) => ({ ...f, purpose: selectFilterValue(v) }))}
+                items={visitPurposeFilterItems}
               >
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Any" />
@@ -193,7 +215,8 @@ export default function VisitsPage() {
               <Label>Status</Label>
               <Select
                 value={filters.status || '__all__'}
-                onValueChange={(v) => setFilters((f) => ({ ...f, status: v === '__all__' ? '' : v }))}
+                onValueChange={(v) => setFilters((f) => ({ ...f, status: selectFilterValue(v) }))}
+                items={visitStatusFilterItems}
               >
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Any" />

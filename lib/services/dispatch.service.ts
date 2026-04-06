@@ -316,13 +316,67 @@ export async function listDispatches(session: SessionUser, q: DispatchListQuery)
     const f = filtered.filter(
       (r) =>
         r.productName.toLowerCase().includes(t) ||
+        r.genericName.toLowerCase().includes(t) ||
         r.personName.toLowerCase().includes(t) ||
-        (r.userName?.toLowerCase().includes(t) ?? false)
+        (r.personCity?.toLowerCase().includes(t) ?? false) ||
+        (r.userName?.toLowerCase().includes(t) ?? false) ||
+        r.dispatch.movementType.toLowerCase().includes(t) ||
+        r.dispatch.dispatchType.toLowerCase().includes(t) ||
+        r.dispatch.status.toLowerCase().includes(t) ||
+        (r.dispatch.invoiceNumber?.toLowerCase().includes(t) ?? false)
     );
     return paginateDispatch(f, q);
   }
 
   return paginateDispatch(filtered, q);
+}
+
+const DISPATCH_LIST_SORT_KEYS = new Set([
+  'dispatchDate',
+  'productName',
+  'personName',
+  'dispatchedByName',
+  'movementType',
+  'dispatchType',
+  'quantity',
+  'status',
+  'invoiceNumber',
+  'totalValue',
+]);
+
+function compareDispatchRows<
+  T extends {
+    dispatch: (typeof dispatches.$inferSelect);
+    productName: string;
+    personName: string;
+    userName: string | null;
+  },
+>(a: T, b: T, sortBy: string): number {
+  switch (sortBy) {
+    case 'productName':
+      return a.productName.localeCompare(b.productName, undefined, { sensitivity: 'base' });
+    case 'personName':
+      return a.personName.localeCompare(b.personName, undefined, { sensitivity: 'base' });
+    case 'dispatchedByName':
+      return (a.userName ?? '').localeCompare(b.userName ?? '', undefined, { sensitivity: 'base' });
+    case 'movementType':
+      return a.dispatch.movementType.localeCompare(b.dispatch.movementType);
+    case 'dispatchType':
+      return a.dispatch.dispatchType.localeCompare(b.dispatch.dispatchType);
+    case 'quantity':
+      return a.dispatch.quantity - b.dispatch.quantity;
+    case 'status':
+      return a.dispatch.status.localeCompare(b.dispatch.status);
+    case 'invoiceNumber':
+      return (a.dispatch.invoiceNumber ?? '').localeCompare(b.dispatch.invoiceNumber ?? '', undefined, {
+        sensitivity: 'base',
+      });
+    case 'totalValue':
+      return Number(a.dispatch.totalValue ?? 0) - Number(b.dispatch.totalValue ?? 0);
+    case 'dispatchDate':
+    default:
+      return a.dispatch.dispatchDate.getTime() - b.dispatch.dispatchDate.getTime();
+  }
 }
 
 function paginateDispatch<
@@ -339,9 +393,13 @@ function paginateDispatch<
   },
 >(filtered: T[], q: DispatchListQuery) {
   const total = filtered.length;
+  const sortBy =
+    q.sortBy && DISPATCH_LIST_SORT_KEYS.has(q.sortBy) ? q.sortBy : 'dispatchDate';
+  const descOrder = q.sortOrder === 'desc';
+
   const sorted = [...filtered].sort((a, b) => {
-    const diff = a.dispatch.dispatchDate.getTime() - b.dispatch.dispatchDate.getTime();
-    return q.sortOrder === 'asc' ? diff : -diff;
+    const cmp = compareDispatchRows(a, b, sortBy);
+    return descOrder ? -cmp : cmp;
   });
   const offset = (q.page - 1) * q.pageSize;
   const slice = sorted.slice(offset, offset + q.pageSize);

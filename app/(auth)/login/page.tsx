@@ -88,6 +88,13 @@ export default function LoginPage() {
         <p className="text-muted-foreground mt-4 text-center text-xs">
           Demo: admin@medcrm.com / Admin@123
         </p>
+        <p className="text-muted-foreground mt-4 border-t pt-4 text-center text-xs leading-relaxed">
+          Made by Ayush Ranjan Sinha
+          <br />
+          <a href="tel:+918709415598" className="text-primary font-medium underline-offset-4 hover:underline">
+            8709415598
+          </a>
+        </p>
       </CardContent>
     </Card>
   );

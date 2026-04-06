@@ -5,6 +5,7 @@ import {
   flexRender,
   getCoreRowModel,
   getSortedRowModel,
+  type OnChangeFn,
   type RowSelectionState,
   type SortingState,
   useReactTable,
@@ -39,11 +40,12 @@ type DataTableProps<T> = {
   searchPlaceholder?: string;
   enableRowSelection?: boolean;
   rowSelection?: RowSelectionState;
-  onRowSelectionChange?: (s: RowSelectionState) => void;
+  onRowSelectionChange?: OnChangeFn<RowSelectionState>;
   getRowId?: (row: T) => string;
   manualSorting?: boolean;
   sorting?: SortingState;
-  onSortingChange?: (s: SortingState) => void;
+  /** Receives the next sorting state after TanStack resolves the updater. */
+  onSortingChange?: (next: SortingState) => void;
 };
 
 export function DataTable<T>({
@@ -120,7 +122,7 @@ export function DataTable<T>({
     manualSorting,
     manualPagination: true,
     pageCount: Math.ceil(total / pageSize) || 1,
-    getRowId: getRowId as (row: T) => string | undefined,
+    getRowId: getRowId as (row: T, index: number) => string,
   });
 
   const pages = Math.max(1, Math.ceil(total / pageSize));

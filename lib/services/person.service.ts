@@ -19,10 +19,14 @@ import type { SessionUser } from '@/types';
 
 const SORTABLE = {
   name: persons.name,
+  entityType: persons.entityType,
+  salesRole: persons.salesRole,
   city: persons.city,
   designation: persons.designation,
+  specialty: persons.specialty,
   hospitalName: persons.hospitalName,
   category: persons.category,
+  stockistCode: persons.stockistCode,
   lastVisitDate: persons.lastVisitDate,
   totalVisits: persons.totalVisits,
   createdAt: persons.createdAt,
@@ -58,7 +62,13 @@ export async function listPersons(session: SessionUser, q: PersonListQuery) {
     const searchCond = or(
       ilike(persons.name, t),
       ilike(persons.hospitalName, t),
-      ilike(persons.city, t)
+      ilike(persons.city, t),
+      ilike(persons.stockistCode, t),
+      ilike(persons.gstin, t),
+      ilike(persons.email, t),
+      ilike(persons.phone, t),
+      ilike(persons.territory, t),
+      ilike(persons.region, t)
     );
     if (searchCond) conditions.push(searchCond);
   }
@@ -87,9 +97,12 @@ export async function listPersons(session: SessionUser, q: PersonListQuery) {
   const [totalRow] = await db.select({ c: count() }).from(persons).where(whereClause);
   const total = Number(totalRow?.c ?? 0);
 
-  const sortCol =
-    SORTABLE[(q.sortBy as keyof typeof SORTABLE) ?? 'name'] ?? persons.name;
   const orderFn = q.sortOrder === 'desc' ? desc : asc;
+  const sortKey = (q.sortBy as keyof typeof SORTABLE | 'assignedMrName') ?? 'name';
+  const sortCol =
+    sortKey === 'assignedMrName'
+      ? users.name
+      : (SORTABLE[sortKey as keyof typeof SORTABLE] ?? persons.name);
 
   const offset = (q.page - 1) * q.pageSize;
   const rows = await db

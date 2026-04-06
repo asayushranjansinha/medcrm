@@ -2,12 +2,17 @@
 
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
-import { HcpCategoryChart } from '@/components/dashboard/hcp-category-chart';
+import { LowStockAlertTable } from '@/components/dashboard/low-stock-alert-table';
+import { MrTargetChart } from '@/components/dashboard/mr-target-chart';
+import { MrVisitCompletionChart } from '@/components/dashboard/mr-visit-completion-chart';
 import { RecentActivityFeed } from '@/components/dashboard/recent-activity-feed';
 import { SalesChart } from '@/components/dashboard/sales-chart';
 import { StatsCard } from '@/components/dashboard/stats-card';
+import { TerritoryRevenueChart } from '@/components/dashboard/territory-revenue-chart';
 import { TopProductsChart } from '@/components/dashboard/top-products-chart';
+import { TopStockistsChart } from '@/components/dashboard/top-stockists-chart';
 import { VisitActivityChart } from '@/components/dashboard/visit-activity-chart';
+import { VisitOutcomeTrendChart } from '@/components/dashboard/visit-outcome-trend-chart';
 import { PageHeader } from '@/components/shared/page-header';
 import { PageLoader } from '@/components/shared/page-loader';
 import { buttonVariants } from '@/components/ui/button';
@@ -41,10 +46,33 @@ export default function DashboardPage() {
         monthlySalesTrend: { month: string; visitCount: number; orderValue: number }[];
         topProducts: { name: string; totalQty: number }[];
         visitStatusBreakdown: Record<string, number>;
-        hcpCategoryDistribution: Record<string, number>;
         recentActivity: { at: string; label: string; detail: string; actor: string }[];
         lowStockAlerts?: number;
         targetAchievementPctAvg?: number;
+        mrTargetVsAchievement: { mrName: string; target: number; achieved: number; pct: number }[];
+        mrVisitCompletion: {
+          mrName: string;
+          planned: number;
+          completed: number;
+          missed: number;
+          completionRate: number;
+        }[];
+        lowStockStockistLines: {
+          stockistName: string;
+          productName: string;
+          currentQty: number;
+          stockistId: string;
+        }[];
+        topStockists: { stockistName: string; totalValue: number; totalUnits: number }[];
+        territoryRevenue: { territory: string; revenue: number }[];
+        visitOutcomeTrend: {
+          month: string;
+          positive: number;
+          neutral: number;
+          negative: number;
+          notMet: number;
+        }[];
+        prescriptionCommitmentRate: number;
       }
     | undefined;
 
@@ -134,7 +162,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Visit status</CardTitle>
@@ -151,22 +179,83 @@ export default function DashboardPage() {
             ) : null}
           </CardContent>
         </Card>
+        <RecentActivityFeed items={s?.recentActivity ?? []} />
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Target vs achievement — current month</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <MrTargetChart data={s?.mrTargetVsAchievement ?? []} />
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">HCP category</CardTitle>
+            <CardTitle className="text-base">MR visit completion</CardTitle>
           </CardHeader>
           <CardContent>
-            {s?.hcpCategoryDistribution ? (
-              <HcpCategoryChart
-                data={Object.entries(s.hcpCategoryDistribution).map(([category, count]) => ({
-                  category,
-                  count,
-                }))}
-              />
-            ) : null}
+            <MrVisitCompletionChart data={s?.mrVisitCompletion ?? []} />
           </CardContent>
         </Card>
-        <RecentActivityFeed items={s?.recentActivity ?? []} />
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Revenue by territory</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TerritoryRevenueChart data={s?.territoryRevenue ?? []} />
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Top stockists by sales</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TopStockistsChart data={s?.topStockists ?? []} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Visit outcome trend — 6 months</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <VisitOutcomeTrendChart data={s?.visitOutcomeTrend ?? []} />
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Low stock alerts</CardTitle>
+            <p className="text-sm text-muted-foreground">Stockist lines under 10 units</p>
+          </CardHeader>
+          <CardContent>
+            <LowStockAlertTable rows={s?.lowStockStockistLines ?? []} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Prescription commitment rate</CardTitle>
+            <p className="text-sm text-muted-foreground">Doctor visits this month</p>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center justify-center gap-2 py-8">
+            <span className="text-6xl font-bold tracking-tight">
+              {s?.prescriptionCommitmentRate ?? 0}%
+            </span>
+            <span className="text-sm text-muted-foreground">
+              of completed doctor visits resulted in prescription commitment
+            </span>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

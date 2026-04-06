@@ -73,6 +73,18 @@ export const visitPurposeEnum = pgEnum('visit_purpose', [
   'OTHER',
 ]);
 export const visitStatusEnum = pgEnum('visit_status', ['PLANNED', 'COMPLETED', 'CANCELLED']);
+export const visitOutcomeEnum = pgEnum('visit_outcome', [
+  'POSITIVE',
+  'NEUTRAL',
+  'NEGATIVE',
+  'NOT_MET',
+]);
+export const visitTypeEnum = pgEnum('visit_type', [
+  'DOCTOR_VISIT',
+  'STOCKIST_VISIT',
+  'HOSPITAL_VISIT',
+  'OTHER',
+]);
 export const dispatchTypeEnum = pgEnum('dispatch_type', [
   'SAMPLE',
   'SALE',
@@ -206,6 +218,9 @@ export const visits = pgTable(
     orderValue: decimal('order_value', { precision: 14, scale: 2 }),
     nextVisitDate: timestamp('next_visit_date', { withTimezone: true, mode: 'date' }),
     status: visitStatusEnum('status').notNull().default('PLANNED'),
+    visitType: visitTypeEnum('visit_type').notNull().default('OTHER'),
+    outcome: visitOutcomeEnum('outcome'),
+    prescriptionCommitment: boolean('prescription_commitment').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' })
       .notNull()
       .defaultNow(),

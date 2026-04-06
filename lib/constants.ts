@@ -81,3 +81,16 @@ export const USER_ROLES = [
 ] as const;
 
 export const CITIES = ['Mumbai', 'Delhi', 'Bengaluru', 'Hyderabad', 'Chennai'] as const;
+
+/** Filter sheet: stock level (API query), not DB enum */
+export const PRODUCT_STOCK_FILTERS = [
+  { value: 'in', label: 'In stock (≥10)' },
+  { value: 'low', label: 'Low (<10)' },
+  { value: 'out', label: 'Out (0)' },
+] as const;
+
+/** Filter sheet: active flag */
+export const ACTIVE_STATUS_FILTERS = [
+  { value: 'true', label: 'Active' },
+  { value: 'false', label: 'Inactive' },
+] as const;

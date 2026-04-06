@@ -1,9 +1,10 @@
 'use client';
 
-import { Download, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from '@/components/ui/sonner';
 import { Button } from '@/components/ui/button';
+import { DownloadIcon } from '@/components/ui/download';
 
 export function ExportButton({
   path,
@@ -52,7 +53,11 @@ export function ExportButton({
 
   return (
     <Button type="button" variant="outline" size="sm" disabled={loading} onClick={onClick}>
-      {loading ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+      {loading ? (
+        <Loader2 className="size-4 shrink-0 animate-spin" />
+      ) : (
+        <DownloadIcon size={16} className="shrink-0 text-muted-foreground" />
+      )}
       <span className="ml-2">{label}</span>
     </Button>
   );

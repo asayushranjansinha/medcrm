@@ -15,6 +15,13 @@
       "when": 1775400000000,
       "tag": "0001_pharma_ops",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1775500000000,
+      "tag": "0002_visit_outcome_type",
+      "breakpoints": true
     }
   ]
 }

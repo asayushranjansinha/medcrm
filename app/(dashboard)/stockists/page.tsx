@@ -10,6 +10,7 @@ export default function StockistsPage() {
       description="Stockist partners and inventory nodes"
       exportFilenamePrefix="stockists"
       addLabel="Add stockist"
+      searchPlaceholder="Search name, code, GSTIN, city, email, territory…"
     />
   );
 }

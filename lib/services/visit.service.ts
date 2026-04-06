@@ -148,6 +148,15 @@ export async function createVisit(session: SessionUser, input: CreateVisitInput)
   const userId =
     session.role === 'ADMIN' && input.userId ? input.userId : session.id;
 
+  const visitType =
+    person.entityType === 'DOCTOR'
+      ? ('DOCTOR_VISIT' as const)
+      : person.entityType === 'STOCKIST'
+        ? ('STOCKIST_VISIT' as const)
+        : person.entityType === 'HOSPITAL'
+          ? ('HOSPITAL_VISIT' as const)
+          : ('OTHER' as const);
+
   const [created] = await db
     .insert(visits)
     .values({
@@ -162,6 +171,7 @@ export async function createVisit(session: SessionUser, input: CreateVisitInput)
       orderValue: input.orderValue && input.orderTaken ? String(input.orderValue) : null,
       nextVisitDate: input.nextVisitDate ?? null,
       status: input.status,
+      visitType,
     })
     .returning();
 

@@ -13,9 +13,18 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
+const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'MedCRM';
+
 export const metadata: Metadata = {
-  title: process.env.NEXT_PUBLIC_APP_NAME ?? 'MedCRM',
-  description: 'Medical territory management CRM',
+  title: {
+    default: appName,
+    template: `%s | ${appName}`,
+  },
+  description:
+    'Medical territory management CRM for pharmaceutical field teams — visits, stockists, dispatches, and MR hierarchy. Built by Ayush Ranjan Sinha.',
+  authors: [{ name: 'Ayush Ranjan Sinha' }],
+  creator: 'Ayush Ranjan Sinha',
+  applicationName: appName,
 };
 
 export default function RootLayout({
@@ -24,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="scroll-smooth" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <Providers>{children}</Providers>
       </body>

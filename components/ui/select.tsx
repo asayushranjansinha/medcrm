@@ -110,6 +110,32 @@ function SelectLabel({
 
 export type SelectOption = { value: string; label: string };
 
+/**
+ * Build `items` for `Select.Root` (Base UI): a value → label map so the closed trigger shows
+ * human-readable text while `value` stays the stored id/enum.
+ */
+export function selectItemsRecordFromOptions(
+  options: readonly SelectOption[],
+  allToken = "__all__",
+  allLabel = "Any"
+): Record<string, string> {
+  return {
+    [allToken]: allLabel,
+    ...Object.fromEntries(options.map((o) => [o.value, o.label] as [string, string])),
+  }
+}
+
+export function selectItemsRecordFromPairs(
+  pairs: readonly { id: string; label: string }[],
+  allToken = "__all__",
+  allLabel = "Any"
+): Record<string, string> {
+  return {
+    [allToken]: allLabel,
+    ...Object.fromEntries(pairs.map((p) => [p.id, p.label] as [string, string])),
+  }
+}
+
 /** Renders `SelectItem`s from `{ value, label }[]` so the trigger shows `label`, not raw `value`. */
 export function SelectOptionItems({ options }: { options: readonly SelectOption[] }) {
   return (

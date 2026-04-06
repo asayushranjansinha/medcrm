@@ -26,6 +26,7 @@ export async function GET(req: NextRequest) {
     productId: sp.get('productId') ?? undefined,
     personId: sp.get('personId') ?? undefined,
     dispatchType: sp.get('dispatchType') ?? undefined,
+    movementType: sp.get('movementType') ?? undefined,
     status: sp.get('status') ?? undefined,
     userId: sp.get('userId') ?? undefined,
     sortBy,
@@ -80,7 +81,7 @@ export async function GET(req: NextRequest) {
   });
 
   const fname = `dispatches_${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
-  return new Response(buffer, {
+  return new Response(new Uint8Array(buffer), {
     headers: {
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': `attachment; filename="${fname}"`,

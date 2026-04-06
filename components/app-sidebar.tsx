@@ -54,8 +54,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent className="gap-2">
         <NavMedCrm />
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter className="gap-2">
         <NavUser />
+        <p className="text-sidebar-foreground/45 px-2 pb-1 text-center text-[10px] leading-snug">
+          Made by Ayush Ranjan Sinha ·{' '}
+          <a
+            href="tel:+918709415598"
+            className="text-sidebar-foreground/70 underline-offset-2 hover:text-sidebar-foreground hover:underline"
+          >
+            8709415598
+          </a>
+        </p>
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

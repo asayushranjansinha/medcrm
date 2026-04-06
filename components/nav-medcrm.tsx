@@ -4,19 +4,19 @@ import type { ElementType } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Building2,
   ClipboardList,
   ContactRound,
   FileSpreadsheet,
   LayoutDashboard,
-  LineChart,
   Pill,
   Settings,
-  Stethoscope,
-  Truck,
-  Users,
-  Warehouse,
 } from 'lucide-react';
+import { ChartLineIcon } from '@/components/ui/chart-line';
+import { StethoscopeIcon } from '@/components/ui/stethoscope';
+import { TruckIcon } from '@/components/ui/truck';
+import { LayersIcon } from '@/components/ui/layers';
+import { AmbulanceIcon } from '@/components/ui/ambulance';
+import { UsersIcon } from '@/components/ui/users';
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -26,25 +26,23 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 
-const OVERVIEW = [
-  { href: '/dashboard', title: 'Dashboard', icon: LayoutDashboard },
-] as const;
+const OVERVIEW = [{ href: '/dashboard', title: 'Dashboard', icon: LayoutDashboard }] as const;
 
 const FIELD = [
-  { href: '/team', title: 'Team', icon: Users },
+  { href: '/team', title: 'Team', icon: UsersIcon },
   { href: '/visits', title: 'Visits', icon: ClipboardList },
-  { href: '/performance', title: 'Performance', icon: LineChart },
+  { href: '/performance', title: 'Performance', icon: ChartLineIcon },
 ] as const;
 
 const SUPPLY = [
-  { href: '/stockists', title: 'Stockists', icon: Warehouse },
-  { href: '/hospitals', title: 'Hospitals', icon: Building2 },
-  { href: '/dispatches', title: 'Stock Movements', icon: Truck },
+  { href: '/stockists', title: 'Stockists', icon: LayersIcon },
+  { href: '/hospitals', title: 'Hospitals', icon: AmbulanceIcon },
+  { href: '/dispatches', title: 'Stock Movements', icon: TruckIcon },
 ] as const;
 
 const MASTERS = [
   { href: '/persons', title: 'Persons', icon: ContactRound },
-  { href: '/doctors', title: 'Doctors', icon: Stethoscope },
+  { href: '/doctors', title: 'Doctors', icon: StethoscopeIcon },
   { href: '/products', title: 'Products', icon: Pill },
   { href: '/reports', title: 'Reports', icon: FileSpreadsheet },
   { href: '/settings', title: 'Settings', icon: Settings },
@@ -55,7 +53,11 @@ function NavBlock({
   items,
 }: {
   label: string;
-  items: readonly { href: string; title: string; icon: ElementType<{ className?: string }> }[];
+  items: readonly {
+    href: string;
+    title: string;
+    icon: ElementType<{ className?: string; size?: number }>;
+  }[];
 }) {
   const pathname = usePathname();
   const { isMobile, setOpenMobile } = useSidebar();
@@ -77,7 +79,7 @@ function NavBlock({
                 tooltip={title}
                 isActive={active}
               >
-                <Icon />
+                <Icon size={16} className="shrink-0" />
                 <span>{title}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
