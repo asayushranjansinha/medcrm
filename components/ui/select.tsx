@@ -137,7 +137,7 @@ export function selectItemsRecordFromPairs(
 }
 
 /** Renders `SelectItem`s from `{ value, label }[]` so the trigger shows `label`, not raw `value`. */
-export function SelectOptionItems({ options }: { options: readonly SelectOption[] }) {
+function SelectOptionItems({ options }: { options: readonly SelectOption[] }) {
   return (
     <>
       {options.map((o) => (

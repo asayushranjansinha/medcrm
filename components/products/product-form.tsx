@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { toast } from '@/components/ui/sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,7 +40,9 @@ export function ProductForm({
   const router = useRouter();
   const isEdit = !!defaultValues?.id;
   const form = useForm<CreateProductInput>({
-    resolver: zodResolver(isEdit ? UpdateProductSchema : CreateProductSchema),
+    resolver: zodResolver(
+      isEdit ? UpdateProductSchema : CreateProductSchema,
+    ) as Resolver<CreateProductInput>,
     defaultValues: {
       name: defaultValues?.name ?? '',
       genericName: defaultValues?.genericName ?? '',
